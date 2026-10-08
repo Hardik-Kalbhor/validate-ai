@@ -6,6 +6,13 @@ const PUBLIC_PATHS = ['/', '/login', '/signup', '/api/health', '/api/contact'];
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // If request arrives with an OAuth code outside /auth/callback (e.g. Supabase fallback redirect), forward it to /auth/callback
+  if (request.nextUrl.searchParams.has('code') && !pathname.startsWith('/auth/callback')) {
+    const callbackUrl = new URL('/auth/callback', request.url);
+    callbackUrl.search = request.nextUrl.search;
+    return NextResponse.redirect(callbackUrl);
+  }
+
   // Allow public paths and api/health / api/contact
   if (
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith('/api/health') || pathname.startsWith('/api/contact')) ||
