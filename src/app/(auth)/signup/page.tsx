@@ -48,18 +48,21 @@ export default function SignupPage() {
       options: { data: { full_name: form.name } },
     });
     if (error) {
-      const res = await fetch('/api/auth/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, full_name: form.name }),
-      });
-      if (res.ok) {
-        toast.success('Account created in preview mode! Redirecting…');
-        router.push('/dashboard');
-        router.refresh();
-      } else {
-        toast.error(error.message);
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
+        const res = await fetch('/api/auth/demo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email, full_name: form.name }),
+        });
+        if (res.ok) {
+          toast.success('Account created in preview mode! Redirecting…');
+          router.push('/dashboard');
+          router.refresh();
+          setIsLoading(false);
+          return;
+        }
       }
+      toast.error(error.message);
     } else {
       toast.success('Account created! Redirecting…');
       router.push('/dashboard');

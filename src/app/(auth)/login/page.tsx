@@ -21,46 +21,30 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (email === 'test@validateai.dev' || !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
-      const res = await fetch('/api/auth/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email || 'test@validateai.dev' }),
-      });
-      if (res.ok) {
-        toast.success('Signed in with testing credentials');
-        router.push('/dashboard');
-        router.refresh();
-        setIsLoading(false);
-        return;
-      }
-    }
-
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      // Fallback for preview testing when Supabase credentials are not connected
-      const res = await fetch('/api/auth/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (res.ok) {
-        toast.success('Signed in with preview mode');
-        router.push('/dashboard');
-        router.refresh();
-      } else {
-        toast.error(error.message);
+      // Offline fallback only when Supabase is not configured (e.g. offline local dev)
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
+        const res = await fetch('/api/auth/demo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        if (res.ok) {
+          toast.success('Signed in with preview mode');
+          router.push('/dashboard');
+          router.refresh();
+          setIsLoading(false);
+          return;
+        }
       }
+      toast.error(error.message);
     } else {
+      toast.success('Signed in successfully');
       router.push('/dashboard');
       router.refresh();
     }
     setIsLoading(false);
-  }
-
-  function fillTestCredentials() {
-    setEmail('test@validateai.dev');
-    setPassword('password123');
   }
 
   return (
@@ -69,24 +53,6 @@ export default function LoginPage() {
         <CardTitle>Welcome back</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Testing credentials box */}
-        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-foreground">Testing Credentials</span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-6 text-xs px-2"
-              onClick={fillTestCredentials}
-            >
-              Fill Credentials
-            </Button>
-          </div>
-          <p className="text-muted-foreground"><strong>Email:</strong> test@validateai.dev</p>
-          <p className="text-muted-foreground"><strong>Password:</strong> password123</p>
-        </div>
-
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1">
             <Label htmlFor="email">Email</Label>

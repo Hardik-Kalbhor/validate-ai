@@ -3,6 +3,17 @@ import crypto from 'crypto';
 import { isUnlimitedUser, UNLIMITED_RUNS_LIMIT, getUserUsage } from '@/lib/user-usage';
 
 export async function POST(req: Request) {
+  const isSupabaseConfigured =
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder');
+
+  if (process.env.NODE_ENV === 'production' && isSupabaseConfigured) {
+    return NextResponse.json(
+      { error: 'Demo authentication is disabled in production' },
+      { status: 403 }
+    );
+  }
+
   const body = await req.json().catch(() => ({}));
   const email = (body.email || 'test@validateai.dev').toLowerCase().trim();
   const fullName =
