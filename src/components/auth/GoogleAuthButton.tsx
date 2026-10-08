@@ -40,9 +40,11 @@ export function GoogleAuthButton({ label = 'Continue with Google', disabled, cla
         }
       }
 
-      const redirectParam = searchParams.get('redirect') || searchParams.get('next') || '/dashboard';
+      const redirectParam = searchParams.get('redirect') || searchParams.get('next');
       const callbackUrl = new URL('/auth/callback', window.location.origin);
-      callbackUrl.searchParams.set('next', redirectParam);
+      if (redirectParam && redirectParam !== '/dashboard') {
+        callbackUrl.searchParams.set('next', redirectParam);
+      }
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
