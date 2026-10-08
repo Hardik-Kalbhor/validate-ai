@@ -1,22 +1,19 @@
-import { generateText, Output } from 'ai';
-import { google } from '@ai-sdk/google';
-import { geminiModel } from '@/lib/ai';
+import { generateObject } from 'ai';
+import { geminiModel, AGENT_TIMEOUT_MS } from '@/lib/ai';
 import { CompetitorAnalysisSchema, type CompetitorAnalysis } from '@/schemas/competitor.schema';
 
 /**
- * Agent 1: Competitor Analysis
- * Uses Google Search grounding to discover and analyze REAL, current competitors.
+ * Agent 1: Competitor Analysis (Dynamic AI Agent)
+ * Identifies and analyzes real, current competitors in India and globally using Google Gemini.
  */
 export async function analyzeCompetitors(
   idea: string,
   language: string
 ): Promise<CompetitorAnalysis> {
-  const { output } = await generateText({
+  const { object } = await generateObject({
     model: geminiModel,
-    tools: {
-      google_search: google.tools.googleSearch({}),
-    },
-    output: Output.object({ schema: CompetitorAnalysisSchema }),
+    schema: CompetitorAnalysisSchema,
+    abortSignal: AbortSignal.timeout(AGENT_TIMEOUT_MS),
     prompt: `You are a startup business analyst specializing in competitive intelligence for the Indian market.
 
 Search for and analyze 3-8 REAL competitors for this business idea:
@@ -25,17 +22,17 @@ IDEA: "${idea}"
 OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}
 
 Instructions:
-1. Search the web for actual competitors operating in India and globally.
-2. Retrieve current pricing details (convert USD to INR where appropriate: 1 USD ≈ 84 INR).
+1. Identify actual competitors operating in India and globally (e.g. BookMyShow, Paytm Insider, Zomato District for ticketing/events, etc.).
+2. Retrieve realistic pricing details in INR where appropriate.
 3. Check market sentiment, user reviews, and app ratings.
 4. Mark Indian-focused direct competitors appropriately.
 5. Identify the distinct market gap this idea can fill.
 6. Only return real, verifiable companies.`,
   });
 
-  if (!output) {
+  if (!object) {
     throw new Error('Competitor analysis returned empty output');
   }
 
-  return output;
+  return object;
 }

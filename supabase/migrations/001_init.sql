@@ -13,7 +13,7 @@ CREATE TABLE profiles (
   id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name   TEXT,
   runs_used   INT NOT NULL DEFAULT 0,
-  runs_limit  INT NOT NULL DEFAULT 10,
+  runs_limit  INT NOT NULL DEFAULT 1,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

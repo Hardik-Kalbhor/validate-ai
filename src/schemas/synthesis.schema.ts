@@ -25,6 +25,7 @@ export const SynthesisSchema = z.object({
     competitive_position: z.number().min(0).max(100),
     technical_feasibility: z.number().min(0).max(100),
     financial_viability: z.number().min(0).max(100),
+    legal_compliance: z.number().min(0).max(100),
   }),
 });
 

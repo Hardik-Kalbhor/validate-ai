@@ -4,11 +4,13 @@ import {
   runTechAgent,
   runFinancialAgent,
   runSynthesisAgent,
+  runLegalAgent,
+  runGlobalBenchmarksAgent,
 } from './agent-runners';
 
 /**
  * Main validation pipeline orchestrator.
- * Runs Agents 1, 2, 3 in PARALLEL, then Agent 4 (Synthesis) sequentially.
+ * Runs Agents 1, 2, 3, 5, 6 in PARALLEL, then Agent 4 (Synthesis) sequentially.
  * Each agent writes to DB as it completes — Supabase Realtime pushes updates to UI.
  *
  * Called as fire-and-forget from the API route — no return value needed.
@@ -27,11 +29,13 @@ export async function runValidationPipeline(
     .eq('id', runId);
 
   try {
-    // ── Phase 1: Run Agents 1, 2, 3 in parallel ──────────────────────
-    const [competitors, tech, finance] = await Promise.allSettled([
+    // ── Phase 1: Run Agents 1, 2, 3, 5, 6 in parallel ──────────────────
+    const [competitors, tech, finance, legal, global] = await Promise.allSettled([
       runCompetitorAgent(admin, runId, idea, language),
       runTechAgent(admin, runId, idea, language),
       runFinancialAgent(admin, runId, idea, language),
+      runLegalAgent(admin, runId, idea, language),
+      runGlobalBenchmarksAgent(admin, runId, idea, language),
     ]);
 
     // Extract results (null if agent failed — synthesis handles gracefully)
@@ -39,9 +43,11 @@ export async function runValidationPipeline(
       competitors: competitors.status === 'fulfilled' ? competitors.value : null,
       tech: tech.status === 'fulfilled' ? tech.value : null,
       finance: finance.status === 'fulfilled' ? finance.value : null,
+      legal: legal.status === 'fulfilled' ? legal.value : null,
+      global: global.status === 'fulfilled' ? global.value : null,
     };
 
-    // ── Phase 2: Synthesis (needs all 3 results as context) ──────────
+    // ── Phase 2: Synthesis (needs all 5 results as context) ──────────
     await runSynthesisAgent(admin, runId, idea, language, agentResults);
 
     // ── Mark run complete ─────────────────────────────────────────────

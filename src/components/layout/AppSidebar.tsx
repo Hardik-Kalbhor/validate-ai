@@ -23,7 +23,8 @@ export function AppSidebar() {
   const supabase = createClient();
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    await supabase.auth.signOut().catch(() => {});
     toast.success('Logged out');
     router.push('/login');
     router.refresh();

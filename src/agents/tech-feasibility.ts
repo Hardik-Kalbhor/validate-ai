@@ -1,11 +1,10 @@
 import { generateObject } from 'ai';
-import { geminiModel } from '@/lib/ai';
+import { geminiModel, AGENT_TIMEOUT_MS } from '@/lib/ai';
 import { TechFeasibilitySchema, type TechFeasibility } from '@/schemas/tech-feasibility.schema';
 
 /**
- * Agent 2: Technical Feasibility
- * Pure domain reasoning — no search needed. Assesses tech complexity,
- * auto-detects business type, and recommends realistic stack + timeline.
+ * Agent 2: Technical Feasibility (Dynamic AI Agent)
+ * Assesses technical complexity, architecture, tech stack, and development timelines using Google Gemini.
  */
 export async function assessTechFeasibility(
   idea: string,
@@ -14,6 +13,7 @@ export async function assessTechFeasibility(
   const { object } = await generateObject({
     model: geminiModel,
     schema: TechFeasibilitySchema,
+    abortSignal: AbortSignal.timeout(AGENT_TIMEOUT_MS),
     prompt: `You are a senior software architect with deep experience in Indian startup tech stacks.
 
 Assess the technical feasibility of this business idea:
@@ -36,9 +36,17 @@ Instructions:
    4-6 = Standard web/mobile dev
    7-9 = Requires specialized engineers
    10 = Research-level difficulty
+7. List 3-8 NICHE UNIQUE TECHNOLOGIES specifically suited to this idea — idea-specific
+   tools, APIs, or platforms (e.g. Runway Gen-3 for AI video, FSSAI FoSCoS API for food,
+   LiveKit for real-time tutoring audio) that a generic startup would NOT use. Do NOT
+   list common items like "React", "PostgreSQL", or "Node.js" in this list.
 
 Be honest and specific. Do not give generic tech buzzwords.`,
   });
+
+  if (!object) {
+    throw new Error('Technical feasibility assessment returned empty output');
+  }
 
   return object;
 }

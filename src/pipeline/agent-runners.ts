@@ -3,6 +3,8 @@ import { analyzeCompetitors } from '@/agents/competitor-analysis';
 import { assessTechFeasibility } from '@/agents/tech-feasibility';
 import { modelFinancials } from '@/agents/financial-modeling';
 import { synthesizeResults } from '@/agents/synthesis';
+import { analyzeLegalRegulatory } from '@/agents/legal-regulatory';
+import { analyzeGlobalBenchmarks } from '@/agents/global-benchmarks';
 
 type AgentStatus = 'running' | 'completed' | 'failed';
 
@@ -35,9 +37,10 @@ export async function runCompetitorAgent(
       updated_at: new Date().toISOString(),
     }).eq('run_id', runId);
     return result;
-  } catch {
+  } catch (error) {
+    console.error(`[Agent 1: Competitors] Failed for run ${runId}:`, error);
     await setAgentStatus(admin, runId, 'competitor_status', 'failed');
-    throw new Error('Competitor agent failed');
+    throw error;
   }
 }
 
@@ -57,9 +60,10 @@ export async function runTechAgent(
       updated_at: new Date().toISOString(),
     }).eq('run_id', runId);
     return result;
-  } catch {
+  } catch (error) {
+    console.error(`[Agent 2: Tech] Failed for run ${runId}:`, error);
     await setAgentStatus(admin, runId, 'tech_status', 'failed');
-    throw new Error('Tech agent failed');
+    throw error;
   }
 }
 
@@ -79,9 +83,10 @@ export async function runFinancialAgent(
       updated_at: new Date().toISOString(),
     }).eq('run_id', runId);
     return result;
-  } catch {
+  } catch (error) {
+    console.error(`[Agent 3: Financial] Failed for run ${runId}:`, error);
     await setAgentStatus(admin, runId, 'financial_status', 'failed');
-    throw new Error('Financial agent failed');
+    throw error;
   }
 }
 
@@ -91,7 +96,13 @@ export async function runSynthesisAgent(
   runId: string,
   idea: string,
   language: string,
-  agentResults: { competitors: unknown; tech: unknown; finance: unknown }
+  agentResults: {
+    competitors: unknown;
+    tech: unknown;
+    finance: unknown;
+    legal: unknown;
+    global?: unknown;
+  }
 ) {
   await setAgentStatus(admin, runId, 'synthesis_status', 'running');
   try {
@@ -101,6 +112,8 @@ export async function runSynthesisAgent(
       competitors: agentResults.competitors as Parameters<typeof synthesizeResults>[0]['competitors'],
       tech: agentResults.tech as Parameters<typeof synthesizeResults>[0]['tech'],
       finance: agentResults.finance as Parameters<typeof synthesizeResults>[0]['finance'],
+      legal: agentResults.legal as Parameters<typeof synthesizeResults>[0]['legal'],
+      global: agentResults.global as Parameters<typeof synthesizeResults>[0]['global'],
     });
     await admin.from('validation_results').update({
       synthesis: result,
@@ -108,8 +121,55 @@ export async function runSynthesisAgent(
       updated_at: new Date().toISOString(),
     }).eq('run_id', runId);
     return result;
-  } catch {
+  } catch (error) {
+    console.error(`[Agent 4: Synthesis] Failed for run ${runId}:`, error);
     await setAgentStatus(admin, runId, 'synthesis_status', 'failed');
-    throw new Error('Synthesis agent failed');
+    throw error;
+  }
+}
+
+/** Run Agent 5 and write result to DB immediately on completion */
+export async function runLegalAgent(
+  admin: SupabaseClient,
+  runId: string,
+  idea: string,
+  language: string
+) {
+  await setAgentStatus(admin, runId, 'legal_status', 'running');
+  try {
+    const result = await analyzeLegalRegulatory(idea, language);
+    await admin.from('validation_results').update({
+      legal_regulatory: result,
+      legal_status: 'completed',
+      updated_at: new Date().toISOString(),
+    }).eq('run_id', runId);
+    return result;
+  } catch (error) {
+    console.error(`[Agent 5: Legal] Failed for run ${runId}:`, error);
+    await setAgentStatus(admin, runId, 'legal_status', 'failed');
+    throw error;
+  }
+}
+
+/** Run Agent 6: Global Precedents & Benchmarks */
+export async function runGlobalBenchmarksAgent(
+  admin: SupabaseClient,
+  runId: string,
+  idea: string,
+  language: string
+) {
+  await setAgentStatus(admin, runId, 'global_status', 'running');
+  try {
+    const result = await analyzeGlobalBenchmarks(idea, language);
+    await admin.from('validation_results').update({
+      global_benchmarks: result,
+      global_status: 'completed',
+      updated_at: new Date().toISOString(),
+    }).eq('run_id', runId);
+    return result;
+  } catch (error) {
+    console.error(`[Agent 6: Global Precedents] Failed for run ${runId}:`, error);
+    await setAgentStatus(admin, runId, 'global_status', 'failed');
+    throw error;
   }
 }

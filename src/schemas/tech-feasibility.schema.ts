@@ -18,6 +18,7 @@ export const TechFeasibilitySchema = z.object({
   security_considerations: z.array(z.string()).min(3).max(6),
   build_vs_buy: z.string(),
   scalability_notes: z.string(),
+  niche_unique_technologies: z.array(z.string()).min(3).max(8),
 });
 
 export type TechFeasibility = z.infer<typeof TechFeasibilitySchema>;

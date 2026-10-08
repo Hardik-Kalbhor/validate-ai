@@ -1,25 +1,31 @@
 'use client';
 
-import { useValidationRun } from '@/hooks/useValidationRun';
+import { useValidationRun, type ValidationRun, type ValidationResults } from '@/hooks/useValidationRun';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle2, XCircle, Clock, Search, Cpu, TrendingUp, Brain } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Clock, Search, Cpu, TrendingUp, Brain, Scale, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const AGENTS = [
-  { key: 'competitor', label: 'Competitor Analysis', icon: Search, statusField: 'competitor_status' },
-  { key: 'tech', label: 'Tech Feasibility', icon: Cpu, statusField: 'tech_status' },
-  { key: 'financial', label: 'Financial Modeling', icon: TrendingUp, statusField: 'financial_status' },
-  { key: 'synthesis', label: 'Synthesis', icon: Brain, statusField: 'synthesis_status' },
+  { key: 'competitor', label: 'Competitor Analysis', icon: Search,     statusField: 'competitor_status' },
+  { key: 'tech',       label: 'Tech Feasibility',   icon: Cpu,         statusField: 'tech_status' },
+  { key: 'financial',  label: 'Financial Modeling', icon: TrendingUp,  statusField: 'financial_status' },
+  { key: 'legal',      label: 'Legal & Compliance', icon: Scale,       statusField: 'legal_status' },
+  { key: 'global',     label: 'Global Precedents',  icon: Globe,       statusField: 'global_status' },
+  { key: 'synthesis',  label: 'Synthesis',           icon: Brain,       statusField: 'synthesis_status' },
 ] as const;
 
-interface Props { runId: string }
+interface Props {
+  runId: string;
+  initialRun?: ValidationRun;
+  initialResults?: ValidationResults;
+}
 
-export function AgentStatusCards({ runId }: Props) {
-  const { results, isLoading } = useValidationRun(runId);
+export function AgentStatusCards({ runId, initialRun, initialResults }: Props) {
+  const { results, isLoading } = useValidationRun(runId, initialRun, initialResults);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {AGENTS.map(({ key, label, icon: Icon, statusField }) => {
         const status = results?.[statusField] ?? 'pending';
         return (

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { createServerClient } from '@/lib/supabase/server';
 import { RunHistoryItem } from '@/components/layout/RunHistoryItem';
@@ -8,12 +9,32 @@ export default async function DashboardPage() {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: runs } = await supabase
-    .from('validation_runs')
-    .select('id, idea_text, status, language, created_at, completed_at')
-    .eq('user_id', user!.id)
-    .order('created_at', { ascending: false })
-    .limit(50);
+  if (!user) {
+    redirect('/login');
+  }
+
+  let runsList = null;
+  try {
+    const { data: runs } = await supabase
+      .from('validation_runs')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    runsList = runs;
+  } catch {
+    // fallback below
+  }
+
+  // Include user-submitted runs from this session
+  const { getPendingRunsByUser } = await import('@/lib/pending-runs');
+  const userPendingRuns = getPendingRunsByUser(user.id);
+
+  if (!runsList || runsList.length === 0) {
+    const { DEMO_RUNS } = await import('@/lib/demo-data');
+    runsList = [...userPendingRuns, ...DEMO_RUNS];
+  } else if (userPendingRuns.length > 0) {
+    runsList = [...userPendingRuns, ...runsList];
+  }
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -24,7 +45,7 @@ export default async function DashboardPage() {
         </Button>
       </div>
 
-      {!runs || runs.length === 0 ? (
+      {!runsList || runsList.length === 0 ? (
         <div className="border rounded-xl p-12 text-center text-muted-foreground">
           <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
           <p className="font-medium">No validations yet</p>
@@ -35,7 +56,9 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {runs.map((run) => <RunHistoryItem key={run.id} run={run as Parameters<typeof RunHistoryItem>[0]['run']} />)}
+          {runsList.map((run) => (
+            <RunHistoryItem key={run.id} run={run as Parameters<typeof RunHistoryItem>[0]['run']} />
+          ))}
         </div>
       )}
     </div>

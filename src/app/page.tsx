@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Search, Cpu, TrendingUp, Brain } from 'lucide-react';
+import { ArrowRight, Search, Cpu, TrendingUp, Scale, Globe, Brain } from 'lucide-react';
 
 const features = [
-  { icon: Search, label: 'Competitor Analysis', desc: 'Live Google Search grounding — real competitors, real pricing.' },
-  { icon: Cpu, label: 'Tech Feasibility', desc: 'Honest stack, timeline & complexity assessment for your idea.' },
-  { icon: TrendingUp, label: 'Financial Modeling', desc: 'TAM/SAM/SOM, revenue projections & Business Model Canvas — grounded in real Indian market data.' },
-  { icon: Brain, label: 'Synthesis', desc: 'Confidence score, top risks, opportunities & your next steps.' },
+  { icon: Search, label: 'Competitor Analysis', desc: 'Live market grounding — real competitors, offerings, pricing & positioning.' },
+  { icon: Cpu, label: 'Tech Feasibility', desc: 'Honest architecture, tech stack, timeline & technical complexity assessment.' },
+  { icon: TrendingUp, label: 'Financial Modeling', desc: 'TAM/SAM/SOM, 3-year revenue projections & Business Model Canvas grounded in real unit economics.' },
+  { icon: Scale, label: 'Legal & Regulatory', desc: 'India compliance check: DPDP Act, sector licenses (RBI, FSSAI, SEBI), GST, entity type & blockers.' },
+  { icon: Globe, label: 'Global Precedents', desc: 'Cross-border benchmarks, proven international playbooks & localization opportunities.' },
+  { icon: Brain, label: 'Synthesis & Verdict', desc: 'Actionable verdict, multi-dimension scores, top risks, opportunities & next steps.' },
 ];
 
 export default function LandingPage() {
@@ -29,8 +31,8 @@ export default function LandingPage() {
           Validate your business idea<br />with AI — in minutes
         </h1>
         <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-          4 parallel AI agents analyze your idea from every angle — competitors, tech, financials, and synthesis.
-          Built for the Indian market.
+          6 specialized AI agents analyze your idea from every angle — competitors, tech, financials, legal compliance, global precedents, and synthesis.
+          Built for high-growth ventures.
         </p>
         <Button size="lg" asChild>
           <Link href="/signup">Start Validating Free <ArrowRight className="ml-2 h-4 w-4" /></Link>
