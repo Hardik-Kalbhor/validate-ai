@@ -4,14 +4,16 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface GoogleAuthButtonProps {
   label?: string;
   disabled?: boolean;
+  className?: string;
 }
 
-export function GoogleAuthButton({ label = 'Continue with Google', disabled }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({ label = 'Continue with Google', disabled, className }: GoogleAuthButtonProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +76,10 @@ export function GoogleAuthButton({ label = 'Continue with Google', disabled }: G
     <Button
       type="button"
       variant="outline"
-      className="w-full flex items-center justify-center gap-2.5 font-medium border-border/80 hover:bg-accent/60 transition-colors"
+      className={cn(
+        "w-full flex items-center justify-center gap-2.5 font-medium border-border/80 hover:bg-accent/60 transition-colors cursor-pointer",
+        className
+      )}
       onClick={handleGoogleSignIn}
       disabled={disabled || isLoading}
     >
