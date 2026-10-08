@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     const usage = await getUserUsage(user.id, user.email);
     const meta = user.user_metadata || {};
 
-    let fullName = (meta.full_name as string) || (user.email ? user.email.split('@')[0] : 'Founder');
+    let fullName = (meta.full_name as string) || (meta.name as string) || (user.email ? user.email.split('@')[0] : 'Founder');
     const company = (meta.company as string) || '';
     const industry = (meta.industry as string) || '';
 

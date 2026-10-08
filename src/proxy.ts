@@ -9,6 +9,7 @@ export async function proxy(request: NextRequest) {
   // Allow public paths and api/health / api/contact
   if (
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith('/api/health') || pathname.startsWith('/api/contact')) ||
+    pathname.startsWith('/auth/callback') ||
     pathname.startsWith('/api/auth/demo') ||
     pathname.startsWith('/api/auth/logout') ||
     pathname.startsWith('/api/pending-run')
