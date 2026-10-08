@@ -50,10 +50,10 @@ export function ContactModal({
     message: ideaSnippet
       ? (isUnlimited
           ? `Hi, I am validating this idea on ValidateAI: "${ideaSnippet.slice(0, 100)}..."`
-          : `Hi, I have completed my 1 free validation run on ValidateAI. I would like to validate this idea further: "${ideaSnippet.slice(0, 100)}..."`)
+          : `Hi, I have completed my 3 free validation runs on ValidateAI. I would like to validate this idea further: "${ideaSnippet.slice(0, 100)}..."`)
       : (isUnlimited
           ? 'Hi, I would like to contact your team regarding my ValidateAI account.'
-          : 'Hi, I have completed my 1 free validation run on ValidateAI and would like to contact your team for further validations.'),
+          : 'Hi, I have completed my 3 free validation runs on ValidateAI and would like to contact your team for further validations.'),
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -106,7 +106,7 @@ export function ContactModal({
                   : 'gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
               }
             >
-              <Sparkles className="h-3 w-3" /> {isUnlimited ? 'Unlimited Plan' : '1 Free Run Completed'}
+              <Sparkles className="h-3 w-3" /> {isUnlimited ? 'Unlimited Plan' : '3 Free Runs Completed'}
             </Badge>
           </div>
           <DialogTitle className="text-xl font-bold tracking-tight">
@@ -115,7 +115,7 @@ export function ContactModal({
           <DialogDescription className="text-sm text-muted-foreground">
             {isUnlimited
               ? 'Have feedback, questions, or custom enterprise requirements? Let our team know below.'
-              : 'You have used your 1 free idea validation run. To validate more business ideas, unlock detailed competitor intelligence, or explore custom founder plans, please contact our team.'}
+              : 'You have used your 3 free idea validation runs. To validate more business ideas, unlock detailed competitor intelligence, or explore custom founder plans, please contact our team.'}
           </DialogDescription>
         </DialogHeader>
 

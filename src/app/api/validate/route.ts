@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         {
           error: 'limit_reached',
           contactRequired: true,
-          message: 'You have used your 1 free validation run. Please contact us for further validations.',
+          message: 'You have used your 3 free validation runs. Please contact us for further validations.',
           runsUsed: usage.runsUsed,
           runsLimit: usage.runsLimit,
         },

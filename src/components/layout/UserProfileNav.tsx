@@ -155,7 +155,7 @@ export function UserProfileNav({ initialUser }: UserProfileNavProps) {
   const displayEmail = profile?.email || '';
   const initials = getInitials(profile?.fullName, profile?.email);
   const runsUsed = profile?.runsUsed ?? 0;
-  const runsLimit = profile?.runsLimit ?? 1;
+  const runsLimit = profile?.runsLimit ?? 3;
 
   return (
     <>
@@ -205,8 +205,8 @@ export function UserProfileNav({ initialUser }: UserProfileNavProps) {
                   {profile?.isUnlimited || runsLimit > 1000
                     ? 'Unlimited Plan'
                     : runsUsed >= runsLimit
-                    ? '1 Run Used'
-                    : 'Free Plan'}
+                    ? `${runsLimit} Runs Used`
+                    : `${runsLimit - runsUsed} Free Runs Left`}
                 </Badge>
               </div>
             </div>

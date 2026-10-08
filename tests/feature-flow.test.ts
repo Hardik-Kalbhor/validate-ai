@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3000';
 
-test('FEATURE TEST: 1 Free Run Per User & Contact Requirement Flow', async (t) => {
+test('FEATURE TEST: 3 Free Runs Per User & Contact Requirement Flow', async (t) => {
   // Check if test server is running
   const isServerRunning = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.timeout(2500) })
     .then((r) => r.ok)
@@ -35,11 +35,12 @@ test('FEATURE TEST: 1 Free Run Per User & Contact Requirement Flow', async (t) =
   assert.equal(usageRes.status, 200);
   const initialUsage = await usageRes.json();
   assert.equal(initialUsage.runsUsed, 0, 'New user must start with 0 runs used');
-  assert.equal(initialUsage.runsLimit, 1, 'New user must have 1 free run limit');
+  assert.equal(initialUsage.runsLimit, 3, 'New user must have 3 free runs limit');
   assert.equal(initialUsage.canValidate, true, 'New user can validate 1st idea');
   assert.equal(initialUsage.hasFreeRunRemaining, true);
 
-  // ── STEP 3: First Idea Validation (Should SUCCEED) ────────────────
+  // ── STEP 3: Idea Validations 1, 2, and 3 ──────────────────────────
+  // Run 1
   const firstIdeaRes = await fetch(`${BASE_URL}/api/validate`, {
     method: 'POST',
     headers: {
@@ -51,50 +52,80 @@ test('FEATURE TEST: 1 Free Run Per User & Contact Requirement Flow', async (t) =
       language: 'en',
     }),
   });
-
   assert.equal(firstIdeaRes.status, 200, 'First validation must succeed with 200');
   const firstIdeaData = await firstIdeaRes.json();
   assert.ok(firstIdeaData.runId, 'Must return a generated runId');
 
-  // Verify updated cookie header if set
-  const updatedCookieHeader = firstIdeaRes.headers.get('set-cookie')?.split(';')[0] || cookieHeader;
+  const cookieAfter1 = firstIdeaRes.headers.get('set-cookie')?.split(';')[0] || cookieHeader;
 
-  // ── STEP 4: Verify Usage After 1st Run (Limit Reached) ────────────
-  const usageAfterRes = await fetch(`${BASE_URL}/api/user/usage`, {
-    headers: { cookie: updatedCookieHeader },
-  });
-  assert.equal(usageAfterRes.status, 200);
-  const usageAfter = await usageAfterRes.json();
-  assert.equal(usageAfter.runsUsed, 1, 'Runs used must now be 1');
-  assert.equal(usageAfter.runsLimit, 1, 'Runs limit is 1');
-  assert.equal(usageAfter.canValidate, false, 'User must NOT be allowed further runs');
-  assert.equal(usageAfter.hasFreeRunRemaining, false);
-
-  // ── STEP 5: Second Validation Attempt (Must be REJECTED 403) ──────
+  // Run 2
   const secondIdeaRes = await fetch(`${BASE_URL}/api/validate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      cookie: updatedCookieHeader,
+      cookie: cookieAfter1,
     },
     body: JSON.stringify({
-      idea: 'A second business idea trying to run after using the 1 free run with enough descriptive context about target market, customer persona, and pricing structure.',
+      idea: 'An autonomous invoice reconciliation agent designed specifically for MSME auto component manufacturers in Pune and Chennai to detect billing mismatches.',
+      language: 'en',
+    }),
+  });
+  assert.equal(secondIdeaRes.status, 200, 'Second validation must succeed with 200');
+
+  const cookieAfter2 = secondIdeaRes.headers.get('set-cookie')?.split(';')[0] || cookieAfter1;
+
+  // Run 3
+  const thirdIdeaRes = await fetch(`${BASE_URL}/api/validate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      cookie: cookieAfter2,
+    },
+    body: JSON.stringify({
+      idea: 'A quick-commerce micro-fulfillment warehouse robotics software for rapid picking of fresh groceries in tier-1 Indian metros with route batching.',
+      language: 'en',
+    }),
+  });
+  assert.equal(thirdIdeaRes.status, 200, 'Third validation must succeed with 200');
+
+  const cookieAfter3 = thirdIdeaRes.headers.get('set-cookie')?.split(';')[0] || cookieAfter2;
+
+  // ── STEP 4: Verify Usage After 3 Runs (Limit Reached) ─────────────
+  const usageAfterRes = await fetch(`${BASE_URL}/api/user/usage`, {
+    headers: { cookie: cookieAfter3 },
+  });
+  assert.equal(usageAfterRes.status, 200);
+  const usageAfter = await usageAfterRes.json();
+  assert.equal(usageAfter.runsUsed, 3, 'Runs used must now be 3');
+  assert.equal(usageAfter.runsLimit, 3, 'Runs limit is 3');
+  assert.equal(usageAfter.canValidate, false, 'User must NOT be allowed further runs');
+  assert.equal(usageAfter.hasFreeRunRemaining, false);
+
+  // ── STEP 5: Fourth Validation Attempt (Must be REJECTED 403) ──────
+  const fourthIdeaRes = await fetch(`${BASE_URL}/api/validate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      cookie: cookieAfter3,
+    },
+    body: JSON.stringify({
+      idea: 'A fourth business idea trying to run after using all 3 free runs with enough descriptive context about target market, customer persona, and pricing structure.',
       language: 'en',
     }),
   });
 
-  assert.equal(secondIdeaRes.status, 403, 'Second validation must be rejected with 403 Forbidden');
-  const secondIdeaData = await secondIdeaRes.json();
-  assert.equal(secondIdeaData.error, 'limit_reached');
-  assert.equal(secondIdeaData.contactRequired, true, 'contactRequired must be true');
-  assert.ok(secondIdeaData.message.includes('free validation run'), 'Message must inform user of 1 free run limit');
+  assert.equal(fourthIdeaRes.status, 403, 'Fourth validation must be rejected with 403 Forbidden');
+  const fourthIdeaData = await fourthIdeaRes.json();
+  assert.equal(fourthIdeaData.error, 'limit_reached');
+  assert.equal(fourthIdeaData.contactRequired, true, 'contactRequired must be true');
+  assert.ok(fourthIdeaData.message.includes('free validation run'), 'Message must inform user of free runs limit');
 
   // ── STEP 6: Submit "Contact for Further" Inquiry ──────────────────
   const contactRes = await fetch(`${BASE_URL}/api/contact`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      cookie: updatedCookieHeader,
+      cookie: cookieAfter3,
     },
     body: JSON.stringify({
       name: 'Aarav Patel',

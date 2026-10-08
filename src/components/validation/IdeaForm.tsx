@@ -39,7 +39,7 @@ interface IdeaFormProps {
 export function IdeaForm({ initialUsage, userEmail, userName }: IdeaFormProps) {
   const router = useRouter();
   const [usage, setUsage] = useState(
-    initialUsage ?? { runsUsed: 0, runsLimit: 1, canValidate: true, isUnlimited: false }
+    initialUsage ?? { runsUsed: 0, runsLimit: 3, canValidate: true, isUnlimited: false }
   );
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
@@ -58,7 +58,7 @@ export function IdeaForm({ initialUsage, userEmail, userName }: IdeaFormProps) {
         if (data) {
           setUsage({
             runsUsed: data.runsUsed ?? 0,
-            runsLimit: data.runsLimit ?? 1,
+            runsLimit: data.runsLimit ?? 3,
             canValidate: data.canValidate ?? true,
             isUnlimited: data.isUnlimited ?? (data.runsLimit > 1000),
           });
@@ -69,7 +69,7 @@ export function IdeaForm({ initialUsage, userEmail, userName }: IdeaFormProps) {
 
   /**
    * Intercept clicks on the "Validate Idea" button.
-   * If the user has already used their 1 free run, immediately pop up
+   * If the user has already used their 3 free runs, immediately pop up
    * the "Contact for further" modal without running form validation or submission.
    */
   const handleValidateButtonClick = (e: React.MouseEvent) => {
@@ -77,7 +77,7 @@ export function IdeaForm({ initialUsage, userEmail, userName }: IdeaFormProps) {
       e.preventDefault();
       e.stopPropagation();
       setIsContactModalOpen(true);
-      toast.info('You have completed your 1 free validation run. Please contact us for further validations.');
+      toast.info(`You have completed your ${usage.runsLimit} free validation runs. Please contact us for further validations.`);
     }
   };
 
@@ -118,7 +118,7 @@ export function IdeaForm({ initialUsage, userEmail, userName }: IdeaFormProps) {
         }));
         setIsContactModalOpen(true);
         toast.error(
-          data.message || '1 free run limit reached. Please contact us for further validations.'
+          data.message || 'Free validation limit reached. Please contact us for further validations.'
         );
         return;
       }

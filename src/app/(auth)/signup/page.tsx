@@ -26,7 +26,7 @@ function SignupForm() {
         </div>
         <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
         <CardDescription className="text-sm">
-          Sign in with Google to get 1 free AI-powered idea validation
+          Sign in with Google to get 3 free AI-powered idea validations
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 pt-2">

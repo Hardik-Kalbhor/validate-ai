@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     email,
     full_name: fullName,
     runs_used: 0,
-    runs_limit: isUnlimited ? UNLIMITED_RUNS_LIMIT : 1,
+    runs_limit: isUnlimited ? UNLIMITED_RUNS_LIMIT : 3,
     is_unlimited: isUnlimited,
   };
 

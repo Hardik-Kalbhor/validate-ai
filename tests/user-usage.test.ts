@@ -8,46 +8,64 @@ import {
   UNLIMITED_RUNS_LIMIT,
 } from '../src/lib/user-usage.ts';
 
-test('Each new user gets exactly 1 free validation run by default', async () => {
+test('Each new user gets exactly 3 free validation runs by default', async () => {
   const newUserId = `test-user-${Date.now()}`;
   await resetUserUsage(newUserId);
 
   const usage = await getUserUsage(newUserId);
   assert.equal(usage.runsUsed, 0, 'New user starts with 0 runs used');
-  assert.equal(usage.runsLimit, 1, 'New user gets exactly 1 free run');
-  assert.equal(usage.canValidate, true, 'New user can validate their first idea');
-  assert.equal(usage.hasFreeRunRemaining, true, 'New user has free run remaining');
+  assert.equal(usage.runsLimit, 3, 'New user gets exactly 3 free runs');
+  assert.equal(usage.canValidate, true, 'New user can validate ideas');
+  assert.equal(usage.hasFreeRunRemaining, true, 'New user has free runs remaining');
   assert.equal(usage.isUnlimited, false);
 });
 
-test('After 1 free run is used, regular user cannot validate and must contact for further runs', async () => {
+test('After 3 free runs are used, regular user cannot validate and must contact for further runs', async () => {
   const userId = `test-user-limit-${Date.now()}`;
   await resetUserUsage(userId);
 
-  // User performs their 1 free run
-  const afterFirstRun = await incrementUserUsage(userId, 'regular@startup.in');
-  assert.equal(afterFirstRun.runsUsed, 1, 'Runs used is now 1');
-  assert.equal(afterFirstRun.runsLimit, 1, 'Limit remains 1');
-  assert.equal(afterFirstRun.canValidate, false, 'User can no longer validate without contacting');
-  assert.equal(afterFirstRun.hasFreeRunRemaining, false, 'No free runs remaining');
+  // Run 1
+  const run1 = await incrementUserUsage(userId, 'regular@startup.in');
+  assert.equal(run1.runsUsed, 1);
+  assert.equal(run1.runsLimit, 3);
+  assert.equal(run1.canValidate, true, 'User can validate 2nd idea');
+  assert.equal(run1.hasFreeRunRemaining, true);
+
+  // Run 2
+  const run2 = await incrementUserUsage(userId, 'regular@startup.in');
+  assert.equal(run2.runsUsed, 2);
+  assert.equal(run2.runsLimit, 3);
+  assert.equal(run2.canValidate, true, 'User can validate 3rd idea');
+  assert.equal(run2.hasFreeRunRemaining, true);
+
+  // Run 3 (exhausts limit)
+  const run3 = await incrementUserUsage(userId, 'regular@startup.in');
+  assert.equal(run3.runsUsed, 3);
+  assert.equal(run3.runsLimit, 3);
+  assert.equal(run3.canValidate, false, 'User can no longer validate without contacting');
+  assert.equal(run3.hasFreeRunRemaining, false, 'No free runs remaining');
 
   // Querying getUserUsage verifies the limit is strictly persisted
   const currentUsage = await getUserUsage(userId, 'regular@startup.in');
-  assert.equal(currentUsage.runsUsed, 1);
+  assert.equal(currentUsage.runsUsed, 3);
   assert.equal(currentUsage.canValidate, false);
 });
 
-test('Resetting user usage restores the 1 free run', async () => {
+test('Resetting user usage restores the 3 free runs', async () => {
   const userId = `test-user-reset-${Date.now()}`;
+  await incrementUserUsage(userId);
+  await incrementUserUsage(userId);
   await incrementUserUsage(userId);
 
   let usage = await getUserUsage(userId);
+  assert.equal(usage.runsUsed, 3);
   assert.equal(usage.canValidate, false);
 
   await resetUserUsage(userId);
   usage = await getUserUsage(userId);
   assert.equal(usage.runsUsed, 0);
   assert.equal(usage.canValidate, true);
+  assert.equal(usage.runsLimit, 3);
 });
 
 test('Whitelisted email nvanalyticalsolutions@gmail.com has permanent unlimited validation access', async () => {

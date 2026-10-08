@@ -66,10 +66,10 @@ function isSupabaseConfigured(): boolean {
 
 /**
  * Retrieves the current validation usage and limit for a given user.
- * Standard users receive 1 free validation run; whitelisted accounts receive unlimited runs.
+ * Standard users receive 3 free validation runs; whitelisted accounts receive unlimited runs.
  */
 export async function getUserUsage(userId: string, email?: string | null): Promise<UserUsage> {
-  const DEFAULT_LIMIT = 1;
+  const DEFAULT_LIMIT = 3;
 
   if (email) {
     emailStore.set(userId, email.toLowerCase().trim());
