@@ -4,6 +4,7 @@ import type { FinancialModel } from '@/schemas/financial-model.schema';
 import type { LegalRegulatory } from '@/schemas/legal-regulatory.schema';
 import type { GlobalPrecedents } from '@/schemas/global-precedents.schema';
 import type { Synthesis } from '@/schemas/synthesis.schema';
+import type { ValidationBrief } from '@/schemas/brief.schema';
 
 export interface PendingRun {
   id: string;
@@ -21,6 +22,8 @@ export type AgentExecutionStatus = 'pending' | 'running' | 'completed' | 'failed
 
 export interface PendingResults {
   run_id: string;
+  brief: ValidationBrief | null;
+  brief_status: AgentExecutionStatus;
   competitors: CompetitorAnalysis | null;
   competitor_status: AgentExecutionStatus;
   tech_feasibility: TechFeasibility | null;
@@ -55,6 +58,8 @@ const resultsStore = globalForStores.__pendingResultsStore;
 export function initPendingResults(runId: string): PendingResults {
   return {
     run_id: runId,
+    brief: null,
+    brief_status: 'pending',
     competitors: null,
     competitor_status: 'pending',
     tech_feasibility: null,

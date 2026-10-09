@@ -7,6 +7,7 @@ import { FinancialModelSchema } from '../src/schemas/financial-model.schema.ts';
 import { SynthesisSchema } from '../src/schemas/synthesis.schema.ts';
 import { LegalRegulatorySchema } from '../src/schemas/legal-regulatory.schema.ts';
 import { GlobalPrecedentsSchema } from '../src/schemas/global-precedents.schema.ts';
+import { ValidationBriefSchema } from '../src/schemas/brief.schema.ts';
 
 const RequestSchema = z.object({
   idea: z.string().min(130, 'Idea must be at least 130 characters'),
@@ -342,6 +343,34 @@ test('DEMO_RESULTS for all 5 distinct ideas validate against all 6 schemas with 
     const synthValid = SynthesisSchema.safeParse(fixture.synthesis);
     assert.equal(synthValid.success, true, `Synthesis schema failed for ${id}`);
     assert.ok(fixture.synthesis.confidence_score > 70, `${id} confidence score should be valid`);
+  }
+});
+
+test('ValidationBriefSchema validates structured idea brief', () => {
+  const sampleBrief = {
+    formal_title: 'Hyperlocal Agro Cold Storage Micro-Warehousing Network',
+    core_problem: 'Post-harvest spoilage for small horticulture farmers in rural India',
+    value_proposition: 'IoT-monitored decentralized solar micro-cold rooms connecting directly to B2B food businesses',
+    target_audience: {
+      segment: 'Rural horticulture farmers in Maharashtra and Gujarat, urban B2B restaurant procurement managers',
+      tier_focus: 'tier_3_rural',
+      business_model: 'b2b',
+    },
+    monetization_hypothesis: 'Monthly pallet rental fee of ₹250/crate + 4% platform commission on B2B farm gate orders',
+    agent_directives: {
+      competitor_focus: 'Search for Ecozen, Tan90, CoolCrop, and unorganized mandi cold storages in western India',
+      tech_focus: 'Evaluate IoT temperature telemetry, low-power LoRaWAN, and offline synchronization in rural areas',
+      financial_focus: 'Model capex per micro-hub (~₹15-20L), farmer ROI, and operating margins with solar power',
+      legal_focus: 'Analyze APMC mandi market regulations, WDRA warehouse accreditation, and FSSAI cold chain compliance',
+      global_focus: 'Examine ColdHubs Nigeria and InspiraFarms Kenya for rural off-grid refrigeration precedents',
+    },
+  };
+
+  const result = ValidationBriefSchema.safeParse(sampleBrief);
+  assert.equal(result.success, true);
+  if (result.success) {
+    assert.equal(result.data.target_audience.business_model, 'b2b');
+    assert.equal(result.data.target_audience.tier_focus, 'tier_3_rural');
   }
 });
 

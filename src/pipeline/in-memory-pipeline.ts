@@ -10,6 +10,7 @@ import type { TechFeasibility } from '@/schemas/tech-feasibility.schema';
 import type { FinancialModel } from '@/schemas/financial-model.schema';
 import type { LegalRegulatory } from '@/schemas/legal-regulatory.schema';
 import type { GlobalPrecedents } from '@/schemas/global-precedents.schema';
+import type { ValidationBrief } from '@/schemas/brief.schema';
 
 /**
  * In-memory validation pipeline orchestrator.
@@ -20,22 +21,30 @@ import type { GlobalPrecedents } from '@/schemas/global-precedents.schema';
 export async function runInMemoryPipeline(
   runId: string,
   idea: string,
-  language: string
+  language: string,
+  approvedBrief?: ValidationBrief
 ): Promise<void> {
   updatePendingRun(runId, { status: 'running' });
 
+  if (approvedBrief) {
+    updatePendingResults(runId, {
+      brief: approvedBrief,
+      brief_status: 'completed',
+    });
+  }
+
   try {
-    // Stagger requests slightly (1.5s) to avoid Google Gemini burst concurrency rate-limiting
+    // Stagger requests slightly (1.2s) to avoid Google Gemini burst concurrency rate-limiting
     const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
     const agentErrors: string[] = [];
 
-    // ── Phase 1: Run Agents 1, 2, 3, 5, 6 in parallel (with spaced start) ──
+    // ── Phase 1: Run Agents 1, 2, 3, 5, 6 in parallel (with spaced start & directives) ──
     const [competitors, tech, finance, legal, global] = await Promise.allSettled([
       (async () => {
         updatePendingResults(runId, { competitor_status: 'running' });
         try {
-          const res = await analyzeCompetitors(idea, language);
+          const res = await analyzeCompetitors(idea, language, approvedBrief?.agent_directives?.competitor_focus);
           updatePendingResults(runId, { competitors: res, competitor_status: 'completed' });
           return res;
         } catch (err) {
@@ -50,7 +59,7 @@ export async function runInMemoryPipeline(
         await delay(1200);
         updatePendingResults(runId, { tech_status: 'running' });
         try {
-          const res = await assessTechFeasibility(idea, language);
+          const res = await assessTechFeasibility(idea, language, approvedBrief?.agent_directives?.tech_focus);
           updatePendingResults(runId, { tech_feasibility: res, tech_status: 'completed' });
           return res;
         } catch (err) {
@@ -65,7 +74,7 @@ export async function runInMemoryPipeline(
         await delay(2400);
         updatePendingResults(runId, { financial_status: 'running' });
         try {
-          const res = await modelFinancials(idea, language);
+          const res = await modelFinancials(idea, language, approvedBrief?.agent_directives?.financial_focus);
           updatePendingResults(runId, { financial_model: res, financial_status: 'completed' });
           return res;
         } catch (err) {
@@ -80,7 +89,7 @@ export async function runInMemoryPipeline(
         await delay(3600);
         updatePendingResults(runId, { legal_status: 'running' });
         try {
-          const res = await analyzeLegalRegulatory(idea, language);
+          const res = await analyzeLegalRegulatory(idea, language, approvedBrief?.agent_directives?.legal_focus);
           updatePendingResults(runId, { legal_regulatory: res, legal_status: 'completed' });
           return res;
         } catch (err) {
@@ -95,7 +104,7 @@ export async function runInMemoryPipeline(
         await delay(4800);
         updatePendingResults(runId, { global_status: 'running' });
         try {
-          const res = await analyzeGlobalBenchmarks(idea, language);
+          const res = await analyzeGlobalBenchmarks(idea, language, approvedBrief?.agent_directives?.global_focus);
           updatePendingResults(runId, { global_benchmarks: res, global_status: 'completed' });
           return res;
         } catch (err) {
@@ -116,7 +125,7 @@ export async function runInMemoryPipeline(
       global: global.status === 'fulfilled' ? (global.value as GlobalPrecedents) : null,
     };
 
-    // ── Phase 2: Synthesis Agent (combines all 5 outputs) ──────────────
+    // ── Phase 2: Synthesis Agent (combines all outputs + brief) ──────────────
     updatePendingResults(runId, { synthesis_status: 'running' });
     try {
       const synthesis = await synthesizeResults({
@@ -127,6 +136,7 @@ export async function runInMemoryPipeline(
         finance: agentResults.finance,
         legal: agentResults.legal,
         global: agentResults.global,
+        brief: approvedBrief ?? null,
       });
       updatePendingResults(runId, {
         synthesis,

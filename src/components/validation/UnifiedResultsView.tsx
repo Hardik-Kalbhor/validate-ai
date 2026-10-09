@@ -20,6 +20,7 @@ import type { FinancialModel } from '@/schemas/financial-model.schema';
 import type { LegalRegulatory } from '@/schemas/legal-regulatory.schema';
 import type { GlobalPrecedents } from '@/schemas/global-precedents.schema';
 import type { Synthesis } from '@/schemas/synthesis.schema';
+import type { ValidationBrief } from '@/schemas/brief.schema';
 import {
   Search,
   Cpu,
@@ -34,6 +35,7 @@ import {
   LayoutGrid,
   FileText,
   AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -45,48 +47,66 @@ interface Props {
   initialResults?: ValidationResults;
 }
 
-const AGENT_CONFIG = [
+import type { LucideIcon } from 'lucide-react';
+
+type StatusFieldKey =
+  | 'competitor_status'
+  | 'tech_status'
+  | 'financial_status'
+  | 'legal_status'
+  | 'global_status'
+  | 'synthesis_status';
+
+interface AgentConfigItem {
+  key: TabKey;
+  label: string;
+  shortLabel: string;
+  icon: LucideIcon;
+  statusField: StatusFieldKey;
+}
+
+const AGENT_CONFIG: AgentConfigItem[] = [
   {
-    key: 'competitors' as TabKey,
+    key: 'competitors',
     label: 'Competitor Analysis',
     shortLabel: 'Competitors',
     icon: Search,
-    statusField: 'competitor_status' as const,
+    statusField: 'competitor_status',
   },
   {
-    key: 'tech' as TabKey,
+    key: 'tech',
     label: 'Tech Feasibility',
     shortLabel: 'Tech Feasibility',
     icon: Cpu,
-    statusField: 'tech_status' as const,
+    statusField: 'tech_status',
   },
   {
-    key: 'finance' as TabKey,
+    key: 'finance',
     label: 'Financial Modeling',
     shortLabel: 'Financial Model',
     icon: TrendingUp,
-    statusField: 'financial_status' as const,
+    statusField: 'financial_status',
   },
   {
-    key: 'legal' as TabKey,
+    key: 'legal',
     label: 'Legal & Compliance',
     shortLabel: 'Legal',
     icon: Scale,
-    statusField: 'legal_status' as const,
+    statusField: 'legal_status',
   },
   {
-    key: 'global' as TabKey,
+    key: 'global',
     label: 'Global Precedents',
     shortLabel: 'Global Models',
     icon: Globe,
-    statusField: 'global_status' as const,
+    statusField: 'global_status',
   },
   {
-    key: 'synthesis' as TabKey,
+    key: 'synthesis',
     label: 'Synthesis & Verdict',
     shortLabel: 'Synthesis',
     icon: Brain,
-    statusField: 'synthesis_status' as const,
+    statusField: 'synthesis_status',
   },
 ];
 
@@ -125,7 +145,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
 
   // Count agent completion progress
   const completedCount = AGENT_CONFIG.filter(
-    (a) => results?.[a.statusField] === 'completed'
+    (a) => (results?.[a.statusField] as string | undefined) === 'completed'
   ).length;
   const isAllComplete = completedCount === AGENT_CONFIG.length;
 
@@ -169,7 +189,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
         {/* ── Agent Status Header Cards (Clickable Quick-Jump) ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {AGENT_CONFIG.map(({ key, label, icon: Icon, statusField }) => {
-            const status = results?.[statusField] ?? 'pending';
+            const status = String(results?.[statusField] ?? 'pending');
             const isSelected = viewMode === 'tabs' && activeTab === key;
 
             return (
@@ -230,6 +250,50 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
             );
           })}
         </div>
+
+        {/* ── Phase 0 Approved Brief Summary ── */}
+        {(() => {
+          const brief = results?.brief as ValidationBrief | undefined;
+          if (!brief) return null;
+          return (
+            <Card className="border-primary/20 bg-muted/20 shadow-none mt-2">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs font-semibold gap-1 py-0.5">
+                      <Sparkles className="h-3 w-3 text-primary" /> Approved Brief
+                    </Badge>
+                    <span className="text-sm font-bold text-foreground">
+                      {brief.formal_title}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {brief.target_audience?.business_model && (
+                      <Badge variant="secondary" className="text-xs uppercase font-medium">
+                        {String(brief.target_audience.business_model).replace('_', ' ')}
+                      </Badge>
+                    )}
+                    {brief.target_audience?.tier_focus && (
+                      <Badge variant="outline" className="text-xs capitalize font-medium">
+                        {String(brief.target_audience.tier_focus).replace('_', ' ')}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground pt-1 border-t border-border/40">
+                  <p>
+                    <span className="font-semibold text-foreground">Target Segment: </span>
+                    {brief.target_audience?.segment || 'Broad target segment'}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-foreground">Monetization: </span>
+                    {brief.monetization_hypothesis || 'Revenue model'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
 
       {/* ── 2. Content Views (Tabs or Full Scrolling Report) ── */}
@@ -237,7 +301,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
           <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto p-1 gap-1">
             {AGENT_CONFIG.map(({ key, shortLabel, icon: Icon, statusField }) => {
-              const status = results?.[statusField];
+              const status = results?.[statusField] as string | undefined;
               return (
                 <TabsTrigger key={key} value={key} className="text-xs md:text-sm gap-1.5 font-medium py-2">
                   <Icon className="h-4 w-4" />

@@ -8,7 +8,8 @@ import { CompetitorAnalysisSchema, type CompetitorAnalysis } from '@/schemas/com
  */
 export async function analyzeCompetitors(
   idea: string,
-  language: string
+  language: string,
+  directive?: string
 ): Promise<CompetitorAnalysis> {
   const { object } = await generateObject({
     model: geminiModel,
@@ -19,7 +20,7 @@ export async function analyzeCompetitors(
 Search for and analyze 3-8 REAL competitors for this business idea:
 
 IDEA: "${idea}"
-OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}
+OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}${directive ? `\n\nRESEARCH DIRECTIVE & SEARCH ANGLE:\n${directive}` : ''}
 
 Instructions:
 1. Identify actual competitors operating in India and globally (e.g. BookMyShow, Paytm Insider, Zomato District for ticketing/events, etc.).

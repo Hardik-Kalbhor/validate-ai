@@ -15,6 +15,8 @@ export interface ValidationRun {
 
 export interface ValidationResults {
   run_id: string;
+  brief?: unknown;
+  brief_status?: string;
   competitors: unknown;
   competitor_status: string;
   tech_feasibility: unknown;

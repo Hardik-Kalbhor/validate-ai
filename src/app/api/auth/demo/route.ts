@@ -7,7 +7,12 @@ export async function POST(req: Request) {
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
     !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder');
 
-  if (process.env.NODE_ENV === 'production' && isSupabaseConfigured) {
+  const allowDemo =
+    process.env.ENABLE_DEMO_AUTH === 'true' ||
+    !isSupabaseConfigured ||
+    process.env.NODE_ENV !== 'production';
+
+  if (!allowDemo) {
     return NextResponse.json(
       { error: 'Demo authentication is disabled in production' },
       { status: 403 }

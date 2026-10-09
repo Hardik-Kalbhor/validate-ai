@@ -10,13 +10,36 @@ async function testLiveRun() {
   const cookie = loginRes.headers.get('set-cookie')?.split(';')[0];
   console.log('Signed in. Cookie:', cookie ? 'Received' : 'None');
 
-  console.log('2. Submitting validation idea...');
+  const fullIdea =
+    'An AI-powered vernacular mental health support platform connecting certified Indian psychologists with tier-2 city youth in Hindi and Marathi, featuring anonymous consultations, CBT-driven wellness exercises, and micro-pricing via UPI.';
+
+  console.log('2. Testing Phase 0 input validation (< 130 chars)...');
+  const shortRes = await fetch(`${BASE}/api/validate/deconstruct`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ idea: 'A short idea under 130 chars' }),
+  });
+  console.log('Short idea rejection status:', shortRes.status, shortRes.status === 400 ? '✓ (Correctly rejected)' : '✖');
+
+  console.log('3. Deconstructing idea with Phase 0 Agent (AI Brief)...');
+  const deconstructRes = await fetch(`${BASE}/api/validate/deconstruct`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ idea: fullIdea, language: 'en' }),
+  });
+  const deconstructData = await deconstructRes.json();
+  console.log('Deconstruct status:', deconstructRes.status);
+  console.log('Brief Formal Title:', deconstructData.brief?.formal_title);
+  console.log('Brief Target Audience:', deconstructData.brief?.target_audience);
+
+  console.log('4. Submitting validation run with approved brief...');
   const validateRes = await fetch(`${BASE}/api/validate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', cookie },
     body: JSON.stringify({
-      idea: 'An AI-powered vernacular mental health support platform connecting certified Indian psychologists with tier-2 city youth in Hindi and Marathi.',
+      idea: fullIdea,
       language: 'en',
+      brief: deconstructData.brief,
     }),
   });
 
@@ -28,7 +51,7 @@ async function testLiveRun() {
   }
 
   const runId = validateData.runId;
-  console.log(`3. Polling run ${runId}...`);
+  console.log(`5. Polling run ${runId}...`);
 
   for (let i = 0; i < 40; i++) {
     await new Promise((r) => setTimeout(r, 2500));
@@ -47,11 +70,13 @@ async function testLiveRun() {
 
     if (run?.status === 'completed') {
       console.log('\nSUCCESS! Full pipeline completed successfully.');
-      console.log('Synthesis verdict:', results?.synthesis?.verdict);
-      console.log('Overall score:', results?.synthesis?.overall_score);
-      console.log('Competitors count:', results?.competitors?.competitors?.length);
-      console.log('Tech stack recommended:', results?.tech_feasibility?.recommended_stack);
-      console.log('Year 3 projected revenue:', results?.financial_model?.year3_revenue_inr);
+      console.log('Synthesis verdict:', results?.synthesis?.viability_verdict);
+      console.log('Confidence score:', results?.synthesis?.confidence_score);
+      console.log('Dimension scores:', results?.synthesis?.dimension_scores);
+      console.log('Tech feasibility:', results?.tech_feasibility?.overall_feasibility);
+      console.log('Year 3 optimistic revenue (INR):', results?.financial_model?.revenue_forecast?.year3_optimistic);
+      console.log('Legal compliance difficulty:', results?.legal_regulatory?.compliance_difficulty);
+      console.log('Global precedents found:', results?.global_benchmarks?.precedents?.length);
       return;
     }
 

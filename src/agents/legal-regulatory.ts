@@ -8,7 +8,8 @@ import { LegalRegulatorySchema, type LegalRegulatory } from '@/schemas/legal-reg
  */
 export async function analyzeLegalRegulatory(
   idea: string,
-  language: string
+  language: string,
+  directive?: string
 ): Promise<LegalRegulatory> {
   const { object } = await generateObject({
     model: geminiModel,
@@ -19,7 +20,7 @@ export async function analyzeLegalRegulatory(
 Analyze the legal and regulatory landscape for this business idea operating in India:
 
 IDEA: "${idea}"
-OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}
+OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}${directive ? `\n\nLEGAL DIRECTIVE & COMPLIANCE FOCUS:\n${directive}` : ''}
 
 Instructions:
 1. Identify 3-6 niche-specific legal challenges & operational liability traps (intermediated escrow, CCPA dark patterns, IT Act Section 79 safe harbour, statutory TDS).

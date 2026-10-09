@@ -5,6 +5,7 @@ import { modelFinancials } from '@/agents/financial-modeling';
 import { synthesizeResults } from '@/agents/synthesis';
 import { analyzeLegalRegulatory } from '@/agents/legal-regulatory';
 import { analyzeGlobalBenchmarks } from '@/agents/global-benchmarks';
+import type { ValidationBrief } from '@/schemas/brief.schema';
 
 type AgentStatus = 'running' | 'completed' | 'failed';
 
@@ -21,16 +22,34 @@ async function setAgentStatus(
     .eq('run_id', runId);
 }
 
+/** Save approved Phase 0 brief to DB */
+export async function saveApprovedBrief(
+  admin: SupabaseClient,
+  runId: string,
+  brief: ValidationBrief
+) {
+  try {
+    await admin.from('validation_results').update({
+      brief,
+      brief_status: 'completed',
+      updated_at: new Date().toISOString(),
+    }).eq('run_id', runId);
+  } catch (error) {
+    console.warn(`[Save Brief] Failed for run ${runId}:`, error);
+  }
+}
+
 /** Run Agent 1 and write result to DB immediately on completion */
 export async function runCompetitorAgent(
   admin: SupabaseClient,
   runId: string,
   idea: string,
-  language: string
+  language: string,
+  directive?: string
 ) {
   await setAgentStatus(admin, runId, 'competitor_status', 'running');
   try {
-    const result = await analyzeCompetitors(idea, language);
+    const result = await analyzeCompetitors(idea, language, directive);
     await admin.from('validation_results').update({
       competitors: result,
       competitor_status: 'completed',
@@ -49,11 +68,12 @@ export async function runTechAgent(
   admin: SupabaseClient,
   runId: string,
   idea: string,
-  language: string
+  language: string,
+  directive?: string
 ) {
   await setAgentStatus(admin, runId, 'tech_status', 'running');
   try {
-    const result = await assessTechFeasibility(idea, language);
+    const result = await assessTechFeasibility(idea, language, directive);
     await admin.from('validation_results').update({
       tech_feasibility: result,
       tech_status: 'completed',
@@ -72,11 +92,12 @@ export async function runFinancialAgent(
   admin: SupabaseClient,
   runId: string,
   idea: string,
-  language: string
+  language: string,
+  directive?: string
 ) {
   await setAgentStatus(admin, runId, 'financial_status', 'running');
   try {
-    const result = await modelFinancials(idea, language);
+    const result = await modelFinancials(idea, language, directive);
     await admin.from('validation_results').update({
       financial_model: result,
       financial_status: 'completed',
@@ -102,6 +123,7 @@ export async function runSynthesisAgent(
     finance: unknown;
     legal: unknown;
     global?: unknown;
+    brief?: unknown;
   }
 ) {
   await setAgentStatus(admin, runId, 'synthesis_status', 'running');
@@ -114,6 +136,7 @@ export async function runSynthesisAgent(
       finance: agentResults.finance as Parameters<typeof synthesizeResults>[0]['finance'],
       legal: agentResults.legal as Parameters<typeof synthesizeResults>[0]['legal'],
       global: agentResults.global as Parameters<typeof synthesizeResults>[0]['global'],
+      brief: agentResults.brief as Parameters<typeof synthesizeResults>[0]['brief'],
     });
     await admin.from('validation_results').update({
       synthesis: result,
@@ -133,11 +156,12 @@ export async function runLegalAgent(
   admin: SupabaseClient,
   runId: string,
   idea: string,
-  language: string
+  language: string,
+  directive?: string
 ) {
   await setAgentStatus(admin, runId, 'legal_status', 'running');
   try {
-    const result = await analyzeLegalRegulatory(idea, language);
+    const result = await analyzeLegalRegulatory(idea, language, directive);
     await admin.from('validation_results').update({
       legal_regulatory: result,
       legal_status: 'completed',
@@ -156,11 +180,12 @@ export async function runGlobalBenchmarksAgent(
   admin: SupabaseClient,
   runId: string,
   idea: string,
-  language: string
+  language: string,
+  directive?: string
 ) {
   await setAgentStatus(admin, runId, 'global_status', 'running');
   try {
-    const result = await analyzeGlobalBenchmarks(idea, language);
+    const result = await analyzeGlobalBenchmarks(idea, language, directive);
     await admin.from('validation_results').update({
       global_benchmarks: result,
       global_status: 'completed',

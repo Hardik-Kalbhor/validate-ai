@@ -8,7 +8,8 @@ import { GlobalPrecedentsSchema, type GlobalPrecedents } from '@/schemas/global-
  */
 export async function analyzeGlobalBenchmarks(
   idea: string,
-  language: string
+  language: string,
+  directive?: string
 ): Promise<GlobalPrecedents> {
   const { object } = await generateObject({
     model: geminiModel,
@@ -19,7 +20,7 @@ export async function analyzeGlobalBenchmarks(
 Your mission is to evaluate whether this exact business idea or a very similar business model has been implemented in ANY COUNTRY OTHER THAN INDIA (e.g. USA, UK, Germany, China, Indonesia, Brazil, Singapore, Japan):
 
 BUSINESS IDEA: "${idea}"
-OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}
+OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}${directive ? `\n\nGLOBAL BENCHMARK DIRECTIVE & INTERNATIONAL ANALOG FOCUS:\n${directive}` : ''}
 
 Instructions:
 1. Identify 2-5 real international precedents or analogous business models outside India.

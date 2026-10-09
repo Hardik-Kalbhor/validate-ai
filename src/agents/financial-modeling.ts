@@ -8,7 +8,8 @@ import { FinancialModelSchema, type FinancialModel } from '@/schemas/financial-m
  */
 export async function modelFinancials(
   idea: string,
-  language: string
+  language: string,
+  directive?: string
 ): Promise<FinancialModel> {
   const { object } = await generateObject({
     model: geminiModel,
@@ -19,7 +20,7 @@ export async function modelFinancials(
 Build a detailed financial model for this business idea:
 
 IDEA: "${idea}"
-OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}
+OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}${directive ? `\n\nFINANCIAL DIRECTIVE & UNIT ECONOMICS HYPOTHESIS:\n${directive}` : ''}
 
 Instructions:
 1. Estimate real market size for this industry in India (TAM/SAM/SOM in INR).

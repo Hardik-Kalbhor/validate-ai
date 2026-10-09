@@ -6,6 +6,7 @@ import type { TechFeasibility } from '@/schemas/tech-feasibility.schema';
 import type { FinancialModel } from '@/schemas/financial-model.schema';
 import type { LegalRegulatory } from '@/schemas/legal-regulatory.schema';
 import type { GlobalPrecedents } from '@/schemas/global-precedents.schema';
+import type { ValidationBrief } from '@/schemas/brief.schema';
 
 interface SynthesisInput {
   idea: string;
@@ -15,6 +16,7 @@ interface SynthesisInput {
   finance: FinancialModel | null;
   legal: LegalRegulatory | null;
   global?: GlobalPrecedents | null;
+  brief?: ValidationBrief | null;
 }
 
 /**
@@ -22,15 +24,16 @@ interface SynthesisInput {
  * Deep reasoning over all parallel agent outputs (Competitors, Tech, Finance, Legal, Global Precedents) using Google Gemini.
  */
 export async function synthesizeResults(input: SynthesisInput): Promise<Synthesis> {
-  const { idea, language, competitors, tech, finance, legal, global } = input;
+  const { idea, language, competitors, tech, finance, legal, global, brief } = input;
 
   const context = [
+    brief ? `VALIDATION BRIEF (APPROVED ASSUMPTIONS & HYPOTHESES):\n${JSON.stringify(brief, null, 2)}` : null,
     competitors ? `COMPETITOR ANALYSIS:\n${JSON.stringify(competitors, null, 2)}` : 'Competitor analysis unavailable.',
     tech ? `TECHNICAL FEASIBILITY:\n${JSON.stringify(tech, null, 2)}` : 'Tech feasibility unavailable.',
     finance ? `FINANCIAL MODEL:\n${JSON.stringify(finance, null, 2)}` : 'Financial model unavailable.',
     legal ? `LEGAL & REGULATORY ANALYSIS:\n${JSON.stringify(legal, null, 2)}` : 'Legal analysis unavailable.',
     global ? `GLOBAL BENCHMARKS & INTERNATIONAL PRECEDENTS:\n${JSON.stringify(global, null, 2)}` : 'Global benchmarks unavailable.',
-  ].join('\n\n---\n\n');
+  ].filter(Boolean).join('\n\n---\n\n');
 
   const { object } = await generateObject({
     model: geminiModel,

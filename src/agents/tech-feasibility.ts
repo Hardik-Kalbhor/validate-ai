@@ -8,7 +8,8 @@ import { TechFeasibilitySchema, type TechFeasibility } from '@/schemas/tech-feas
  */
 export async function assessTechFeasibility(
   idea: string,
-  language: string
+  language: string,
+  directive?: string
 ): Promise<TechFeasibility> {
   const { object } = await generateObject({
     model: geminiModel,
@@ -19,7 +20,7 @@ export async function assessTechFeasibility(
 Assess the technical feasibility of this business idea:
 
 IDEA: "${idea}"
-OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}
+OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}${directive ? `\n\nTECHNICAL DIRECTIVE & ARCHITECTURE FOCUS:\n${directive}` : ''}
 
 Instructions:
 1. First, determine if this is an online, offline, or hybrid business.

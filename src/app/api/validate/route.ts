@@ -6,10 +6,12 @@ import { runValidationPipeline } from '@/pipeline/validate-idea';
 import { runInMemoryPipeline } from '@/pipeline/in-memory-pipeline';
 import { setPendingRun } from '@/lib/pending-runs';
 import { z } from 'zod';
+import { ValidationBriefSchema } from '@/schemas/brief.schema';
 
 const RequestSchema = z.object({
   idea: z.string().min(130, 'Idea must be at least 130 characters'),
   language: z.enum(['en', 'hi', 'mr']).default('en'),
+  approvedBrief: ValidationBriefSchema.optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -76,7 +78,7 @@ export async function POST(req: NextRequest) {
         await incrementUserUsage(user.id, user.email);
 
         // Fire-and-forget pipeline
-        runValidationPipeline(run.id, body.idea, body.language).catch((err) => {
+        runValidationPipeline(run.id, body.idea, body.language, body.approvedBrief).catch((err) => {
           console.error(`[Pipeline] Run ${run.id} failed:`, err);
         });
       }
@@ -102,7 +104,7 @@ export async function POST(req: NextRequest) {
       await incrementUserUsage(user.id, user.email);
 
       // Fire-and-forget real in-memory agent pipeline
-      runInMemoryPipeline(runId, body.idea, body.language).catch((err) => {
+      runInMemoryPipeline(runId, body.idea, body.language, body.approvedBrief).catch((err) => {
         console.error(`[In-Memory Pipeline] Run ${runId} failed:`, err);
       });
     }
