@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -119,7 +118,7 @@ export function DeconstructedBriefReview({
               <h3 className="text-sm font-semibold">Target Market & Business Model</h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs text-muted-foreground">Business Delivery Model</Label>
                 {isEditing ? (
@@ -132,7 +131,7 @@ export function DeconstructedBriefReview({
                       })
                     }
                   >
-                    <SelectTrigger className="mt-1 h-9">
+                    <SelectTrigger className="mt-1 h-9 bg-background border-input text-foreground">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -165,7 +164,7 @@ export function DeconstructedBriefReview({
                       })
                     }
                   >
-                    <SelectTrigger className="mt-1 h-9">
+                    <SelectTrigger className="mt-1 h-9 bg-background border-input text-foreground">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -184,40 +183,44 @@ export function DeconstructedBriefReview({
                   </div>
                 )}
               </div>
+            </div>
 
-              <div>
-                <Label className="text-xs text-muted-foreground">Target Customer Persona</Label>
-                {isEditing ? (
-                  <Input
-                    value={brief.target_audience.segment}
-                    onChange={(e) =>
-                      setBrief({
-                        ...brief,
-                        target_audience: { ...brief.target_audience, segment: e.target.value },
-                      })
-                    }
-                    className="mt-1 h-9 text-xs"
-                  />
-                ) : (
-                  <p className="text-xs font-medium text-foreground mt-1.5 truncate">
-                    {brief.target_audience.segment}
-                  </p>
-                )}
-              </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Target Customer Persona</Label>
+              {isEditing ? (
+                <Textarea
+                  value={brief.target_audience.segment}
+                  onChange={(e) =>
+                    setBrief({
+                      ...brief,
+                      target_audience: { ...brief.target_audience, segment: e.target.value },
+                    })
+                  }
+                  rows={2}
+                  className="mt-1 min-h-[56px] text-xs leading-relaxed"
+                  placeholder="e.g. Small-scale horticulture farmers and FPOs in Maharashtra and Gujarat"
+                />
+              ) : (
+                <p className="text-xs font-medium text-foreground mt-1.5 leading-relaxed">
+                  {brief.target_audience.segment}
+                </p>
+              )}
             </div>
 
             <div className="pt-2 border-t">
               <Label className="text-xs text-muted-foreground">Monetization Hypothesis</Label>
               {isEditing ? (
-                <Input
+                <Textarea
                   value={brief.monetization_hypothesis}
                   onChange={(e) => setBrief({ ...brief, monetization_hypothesis: e.target.value })}
-                  className="mt-1 h-9 text-xs"
+                  rows={2}
+                  className="mt-1 min-h-[56px] text-xs leading-relaxed"
+                  placeholder="e.g. Monthly platform subscription + 2-3% transaction commission on orders"
                 />
               ) : (
-                <div className="flex items-center gap-2 mt-1">
-                  <DollarSign className="h-4 w-4 text-green-600 shrink-0" />
-                  <p className="text-xs font-medium text-foreground">{brief.monetization_hypothesis}</p>
+                <div className="flex items-start gap-2 mt-1">
+                  <DollarSign className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+                  <p className="text-xs font-medium text-foreground leading-relaxed">{brief.monetization_hypothesis}</p>
                 </div>
               )}
             </div>

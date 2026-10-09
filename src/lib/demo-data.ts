@@ -547,3 +547,21 @@ DEMO_RESULTS['demo-video'] = fixtureToDemoResult('demo-video', videoDramaFixture
 DEMO_RESULTS['demo-edtech'] = fixtureToDemoResult('demo-edtech', edTechFixture);
 DEMO_RESULTS['demo-saas'] = fixtureToDemoResult('demo-saas', b2bManufacturingFixture);
 
+export function getDomainFixtureForIdea(idea: string): DomainFixture {
+  const lower = (idea || '').toLowerCase();
+  if (/cook|food|tiffin|kitchen|meal|restaurant|catering|spoilage|cold storage|warehouse|perishable|farmer|horticulture|agri/i.test(lower)) {
+    return foodTiffinFixture;
+  }
+  if (/kirana|shop|retail|grocery|inventory|khata|store/i.test(lower)) {
+    return kiranaFixture;
+  }
+  if (/video|drama|series|stream|entertainment|movie|ott|media/i.test(lower)) {
+    return videoDramaFixture;
+  }
+  if (/tutor|student|exam|college|learn|education|edtech|course|school/i.test(lower)) {
+    return edTechFixture;
+  }
+  return b2bManufacturingFixture;
+}
+
+

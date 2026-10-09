@@ -64,6 +64,13 @@ function isSupabaseConfigured(): boolean {
   return Boolean(url && !url.includes('placeholder'));
 }
 
+function withTimeout<T>(promise: Promise<T> | PromiseLike<T>, ms = 1200): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Supabase query timeout')), ms)),
+  ]);
+}
+
 /**
  * Retrieves the current validation usage and limit for a given user.
  * Standard users receive 3 free validation runs; whitelisted accounts receive unlimited runs.
@@ -88,20 +95,23 @@ export async function getUserUsage(userId: string, email?: string | null): Promi
 
       // If email isn't known yet, attempt to fetch it from Supabase auth
       if (!userEmail) {
-        const { data: authUser } = await admin.auth.admin.getUserById(userId);
-        if (authUser?.user?.email) {
-          userEmail = authUser.user.email.toLowerCase().trim();
+        const authUser = await withTimeout(admin.auth.admin.getUserById(userId)).catch(() => ({ data: { user: null } }));
+        if (authUser?.data?.user?.email) {
+          userEmail = authUser.data.user.email.toLowerCase().trim();
           emailStore.set(userId, userEmail);
         }
       }
 
       const isUnlimited = isUnlimitedUser(userId, userEmail);
 
-      const { data: profile } = await admin
-        .from('profiles')
-        .select('runs_used, runs_limit')
-        .eq('id', userId)
-        .single();
+      const profileRes = await withTimeout(
+        admin
+          .from('profiles')
+          .select('runs_used, runs_limit')
+          .eq('id', userId)
+          .single()
+      );
+      const profile = profileRes?.data;
 
       if (profile) {
         let runsLimit = profile.runs_limit ?? DEFAULT_LIMIT;
@@ -213,14 +223,16 @@ export async function incrementUserUsage(userId: string, email?: string | null):
   if (isSupabaseConfigured()) {
     try {
       const admin = createAdminClient();
-      await admin
-        .from('profiles')
-        .update({
-          runs_used: nextUsed,
-          runs_limit: runsLimit,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
+      await withTimeout(
+        admin
+          .from('profiles')
+          .update({
+            runs_used: nextUsed,
+            runs_limit: runsLimit,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', userId)
+      );
     } catch {
       // Supabase unavailable
     }

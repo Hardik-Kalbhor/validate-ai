@@ -12,6 +12,7 @@ const RequestSchema = z.object({
   idea: z.string().min(130, 'Idea must be at least 130 characters'),
   language: z.enum(['en', 'hi', 'mr']).default('en'),
   approvedBrief: ValidationBriefSchema.optional(),
+  brief: ValidationBriefSchema.optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -25,7 +26,11 @@ export async function POST(req: NextRequest) {
 
     // ── 2. Rate Limit ───────────────────────────────────────────────
     try {
-      const { success, remaining } = await validationRatelimit.limit(user.id);
+      const ratelimitPromise = validationRatelimit.limit(user.id);
+      const timeoutPromise = new Promise<{ success: boolean; remaining: number }>((resolve) =>
+        setTimeout(() => resolve({ success: true, remaining: 10 }), 1000)
+      );
+      const { success, remaining } = await Promise.race([ratelimitPromise, timeoutPromise]);
       if (!success) {
         return NextResponse.json(
           { error: 'Rate limit exceeded. Max 10 validations per hour.' },
@@ -63,14 +68,21 @@ export async function POST(req: NextRequest) {
 
     // ── 5. Create Run Record ─────────────────────────────────────────
     let runId: string | null = null;
+    const finalBrief = body.approvedBrief || body.brief;
 
     try {
       const admin = createAdminClient();
-      const { data: run } = await admin
+      const insertPromise = admin
         .from('validation_runs')
         .insert({ user_id: user.id, idea_text: body.idea, language: body.language })
         .select('id')
         .single();
+
+      const timeoutPromise = new Promise<{ data: null }>((_, reject) =>
+        setTimeout(() => reject(new Error('DB Timeout')), 1500)
+      );
+
+      const { data: run } = await Promise.race([insertPromise, timeoutPromise]);
 
       if (run?.id) {
         runId = run.id;
@@ -78,7 +90,7 @@ export async function POST(req: NextRequest) {
         await incrementUserUsage(user.id, user.email);
 
         // Fire-and-forget pipeline
-        runValidationPipeline(run.id, body.idea, body.language, body.approvedBrief).catch((err) => {
+        runValidationPipeline(run.id, body.idea, body.language, finalBrief).catch((err) => {
           console.error(`[Pipeline] Run ${run.id} failed:`, err);
         });
       }
@@ -104,7 +116,7 @@ export async function POST(req: NextRequest) {
       await incrementUserUsage(user.id, user.email);
 
       // Fire-and-forget real in-memory agent pipeline
-      runInMemoryPipeline(runId, body.idea, body.language, body.approvedBrief).catch((err) => {
+      runInMemoryPipeline(runId, body.idea, body.language, finalBrief).catch((err) => {
         console.error(`[In-Memory Pipeline] Run ${runId} failed:`, err);
       });
     }
