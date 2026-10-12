@@ -52,6 +52,8 @@ export async function GET(request: Request) {
       cookiesToSetLater.forEach(({ name, value, options }) => {
         response.cookies.set(name, value, options);
       });
+      // Clear any legacy demo user cookie on real Google OAuth sign-in
+      response.cookies.delete('validateai_demo_user');
 
       return response;
     }

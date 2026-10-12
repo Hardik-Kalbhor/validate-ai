@@ -37,21 +37,32 @@ export async function createServerClient() {
     try {
       const demoUser = JSON.parse(demoCookie.value);
       const originalAuth = client.auth;
+      const originalGetUser = originalAuth.getUser.bind(originalAuth);
+
       client.auth = {
         ...originalAuth,
-        getUser: async () => ({
-          data: {
-            user: {
-              id: demoUser.id || '00000000-0000-0000-0000-000000000001',
-              email: demoUser.email || 'test@validateai.dev',
-              user_metadata: { full_name: demoUser.full_name || 'Test Founder' },
-              app_metadata: {},
-              aud: 'authenticated',
-              created_at: new Date().toISOString(),
-            } as unknown as import('@supabase/supabase-js').User,
-          },
-          error: null,
-        }),
+        getUser: async () => {
+          // Check real Supabase authentication first so real users never get overridden
+          const realRes = await originalGetUser().catch(() => ({ data: { user: null }, error: null }));
+          if (realRes?.data?.user) {
+            return realRes;
+          }
+
+          // Fallback to demo cookie only when no real Supabase session exists
+          return {
+            data: {
+              user: {
+                id: demoUser.id || '00000000-0000-0000-0000-000000000001',
+                email: demoUser.email || 'test@validateai.dev',
+                user_metadata: { full_name: demoUser.full_name || 'Test Founder' },
+                app_metadata: {},
+                aud: 'authenticated',
+                created_at: new Date().toISOString(),
+              } as unknown as import('@supabase/supabase-js').User,
+            },
+            error: null,
+          };
+        },
       } as unknown as typeof client.auth;
     } catch {
       // ignore
