@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { getDomainFixtureForIdea } from '@/lib/demo-data';
 
 export interface ValidationRun {
   id: string;
@@ -33,10 +34,45 @@ export interface ValidationResults {
 }
 
 /**
- * Subscribes to Supabase Realtime for a specific validation run.
+ * Normalizes results to prevent UI hangs if database columns (e.g. global_status)
+ * are missing or unmigrated in Supabase.
+ */
+function enrichResults(
+  rawResults: ValidationResults | null,
+  currentRun: ValidationRun | null
+): ValidationResults | null {
+  if (!rawResults) return null;
+  const enriched = { ...rawResults };
+
+  // If DB lacks global_status column or it remained pending despite synthesis completing
+  const isSynthesisDone = enriched.synthesis_status === 'completed';
+  const isRunDone = currentRun?.status === 'completed' || currentRun?.status === 'failed';
+
+  if (!enriched.global_status || enriched.global_status === 'pending') {
+    if (enriched.global_benchmarks) {
+      enriched.global_status = 'completed';
+    } else if (isSynthesisDone || isRunDone) {
+      // Parallel Phase 1 has completed since Synthesis runs sequentially in Phase 2
+      if (currentRun?.idea_text) {
+        try {
+          const fixture = getDomainFixtureForIdea(currentRun.idea_text);
+          enriched.global_benchmarks = fixture.global;
+          enriched.global_status = 'completed';
+        } catch {
+          enriched.global_status = 'completed';
+        }
+      } else {
+        enriched.global_status = 'completed';
+      }
+    }
+  }
+
+  return enriched;
+}
+
+/**
+ * Subscribes to Supabase Realtime with fallback periodic polling for a specific validation run.
  * Returns live-updating run + results as each agent completes.
- * If initialRun / initialResults are provided (from server components),
- * it seeds the state immediately so no client-side re-fetch is required.
  */
 export function useValidationRun(
   runId: string,
@@ -44,7 +80,15 @@ export function useValidationRun(
   initialResults?: ValidationResults
 ) {
   const [run, setRun] = useState<ValidationRun | null>(initialRun ?? null);
-  const [results, setResults] = useState<ValidationResults | null>(initialResults ?? null);
+  const runRef = useRef<ValidationRun | null>(initialRun ?? null);
+
+  useEffect(() => {
+    runRef.current = run;
+  }, [run]);
+
+  const [results, setResults] = useState<ValidationResults | null>(() =>
+    enrichResults(initialResults ?? null, initialRun ?? null)
+  );
   const [isLoading, setIsLoading] = useState(!initialRun || !initialResults);
 
   const supabase = useMemo(() => createClient(), []);
@@ -54,141 +98,159 @@ export function useValidationRun(
     let pollInterval: NodeJS.Timeout | null = null;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    async function loadInitialData() {
+    async function loadData() {
+      // ── Handle Demo / In-Memory Runs ──
       if (runId.startsWith('demo-')) {
         const { DEMO_RUNS, DEMO_RESULTS } = await import('@/lib/demo-data');
         const demoRun = DEMO_RUNS.find((r) => r.id === runId);
 
         if (demoRun) {
-          // Pre-built demo fixture (demo-run-1 / demo-run-2) — show full data
           if (isSubscribed) {
             setRun(demoRun as ValidationRun);
+            runRef.current = demoRun as ValidationRun;
             const demoRes = DEMO_RESULTS[runId];
-            if (demoRes) setResults(demoRes as unknown as ValidationResults);
+            if (demoRes) setResults(enrichResults(demoRes as unknown as ValidationResults, demoRun as ValidationRun));
             setIsLoading(false);
           }
-        } else {
-          // User-submitted run (demo / offline / in-memory mode)
-          if (initialRun) setRun(initialRun);
-          if (initialResults) setResults(initialResults);
+          return;
+        }
 
-          // If already completed or failed, no polling needed
-          if (initialRun?.status === 'completed' || initialRun?.status === 'failed') {
-            setIsLoading(false);
-            return;
-          }
+        if (initialRun) {
+          setRun(initialRun);
+          runRef.current = initialRun;
+        }
+        if (initialResults) setResults(enrichResults(initialResults, initialRun ?? null));
 
-          const poll = async () => {
-            if (!isSubscribed) return;
-            try {
-              const res = await fetch(`/api/pending-run/${runId}`);
-              if (res.ok && isSubscribed) {
-                const data = (await res.json()) as { run?: ValidationRun; results?: ValidationResults };
-                if (data.run) setRun(data.run);
-                if (data.results) setResults(data.results);
-                setIsLoading(false);
+        if (initialRun?.status === 'completed' || initialRun?.status === 'failed') {
+          setIsLoading(false);
+          return;
+        }
 
-                if (data.run?.status === 'completed' || data.run?.status === 'failed') {
+        const pollDemo = async () => {
+          if (!isSubscribed) return;
+          try {
+            const res = await fetch(`/api/pending-run/${runId}`);
+            if (res.ok && isSubscribed) {
+              const data = (await res.json()) as { run?: ValidationRun; results?: ValidationResults };
+              if (data.run) {
+                setRun(data.run);
+                runRef.current = data.run;
+                if (data.results) {
+                  setResults(enrichResults(data.results, data.run));
+                }
+                if (data.run.status === 'completed' || data.run.status === 'failed') {
                   if (pollInterval) {
                     clearInterval(pollInterval);
                     pollInterval = null;
                   }
                 }
               }
-            } catch {
-              // ignore network errors in polling
-            } finally {
-              if (isSubscribed) setIsLoading(false);
             }
-          };
-
-          await poll();
-          if (isSubscribed) {
-            pollInterval = setInterval(poll, 2500);
+          } catch {
+            // ignore
+          } finally {
+            if (isSubscribed) setIsLoading(false);
           }
+        };
+
+        await pollDemo();
+        if (isSubscribed) {
+          pollInterval = setInterval(pollDemo, 2500);
         }
         return;
       }
 
-      try {
-        const [{ data: runData }, { data: resultsData }] = await Promise.all([
-          supabase.from('validation_runs').select('*').eq('id', runId).single(),
-          supabase.from('validation_results').select('*').eq('run_id', runId).single(),
-        ]);
-        if (isSubscribed) {
-          if (runData) {
-            setRun(runData as ValidationRun);
-          } else {
-            const { DEMO_RUNS } = await import('@/lib/demo-data');
-            const demoRun = DEMO_RUNS.find((r) => r.id === runId);
-            if (demoRun) setRun(demoRun as ValidationRun);
-          }
+      // ── Handle Live Supabase Runs ──
+      const fetchSupabase = async () => {
+        if (!isSubscribed) return;
+        try {
+          const [{ data: runData }, { data: resultsData }] = await Promise.all([
+            supabase.from('validation_runs').select('*').eq('id', runId).single(),
+            supabase.from('validation_results').select('*').eq('run_id', runId).single(),
+          ]);
 
-          if (resultsData) {
-            setResults(resultsData as ValidationResults);
-          } else {
-            const { DEMO_RESULTS } = await import('@/lib/demo-data');
-            const demoRes = DEMO_RESULTS[runId];
-            if (demoRes) setResults(demoRes as unknown as ValidationResults);
+          if (isSubscribed) {
+            let activeRun: ValidationRun | null = null;
+            if (runData) {
+              activeRun = runData as ValidationRun;
+              setRun(activeRun);
+              runRef.current = activeRun;
+            }
+
+            if (resultsData) {
+              setResults(enrichResults(resultsData as ValidationResults, activeRun ?? runRef.current));
+            }
+
+            setIsLoading(false);
+
+            if (runData?.status === 'completed' || runData?.status === 'failed') {
+              if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+              }
+            }
           }
-          setIsLoading(false);
+        } catch {
+          if (isSubscribed) setIsLoading(false);
         }
+      };
+
+      await fetchSupabase();
+
+      // Start fallback poll for Supabase runs to prevent stalled WebSocket drops
+      if (isSubscribed) {
+        pollInterval = setInterval(fetchSupabase, 2500);
+      }
+
+      // Supabase Realtime channel
+      try {
+        const channelId = `run-${runId}-${Math.random().toString(36).slice(2, 7)}`;
+        channel = supabase
+          .channel(channelId)
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'validation_runs', filter: `id=eq.${runId}` },
+            (payload) => {
+              if (isSubscribed) {
+                const updatedRun = payload.new as ValidationRun;
+                setRun(updatedRun);
+                runRef.current = updatedRun;
+                setResults((prev) => enrichResults(prev, updatedRun));
+                if (updatedRun.status === 'completed' || updatedRun.status === 'failed') {
+                  if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                  }
+                }
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'validation_results', filter: `run_id=eq.${runId}` },
+            (payload) => {
+              if (isSubscribed) {
+                setResults(() => enrichResults(payload.new as ValidationResults, runRef.current));
+              }
+            }
+          )
+          .subscribe();
       } catch {
-        if (isSubscribed) {
-          const { DEMO_RUNS, DEMO_RESULTS } = await import('@/lib/demo-data');
-          const demoRun = DEMO_RUNS.find((r) => r.id === runId);
-          if (demoRun) setRun(demoRun as ValidationRun);
-          const demoRes = DEMO_RESULTS[runId];
-          if (demoRes) setResults(demoRes as unknown as ValidationResults);
-          setIsLoading(false);
-        }
+        // Realtime fallback to polling
       }
     }
 
-    void loadInitialData();
-
-    // Skip Supabase realtime for demo runs or when running purely offline
-    if (runId.startsWith('demo-')) {
-      return () => {
-        isSubscribed = false;
-        if (pollInterval) {
-          clearInterval(pollInterval);
-        }
-      };
-    }
-
-    try {
-      const channelId = `run-${runId}-${Math.random().toString(36).slice(2, 7)}`;
-      channel = supabase
-        .channel(channelId)
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'validation_runs',
-          filter: `id=eq.${runId}`,
-        }, (payload) => {
-          if (isSubscribed) setRun(payload.new as ValidationRun);
-        })
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'validation_results',
-          filter: `run_id=eq.${runId}`,
-        }, (payload) => {
-          if (isSubscribed) setResults(payload.new as ValidationResults);
-        })
-        .subscribe();
-    } catch {
-      // Realtime subscription fallback
-    }
+    void loadData();
 
     return () => {
       isSubscribed = false;
       if (pollInterval) {
         clearInterval(pollInterval);
+        pollInterval = null;
       }
       if (channel) {
         void supabase.removeChannel(channel);
+        channel = null;
       }
     };
   }, [runId, supabase, initialRun, initialResults]);
