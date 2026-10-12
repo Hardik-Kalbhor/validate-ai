@@ -139,6 +139,19 @@ export async function getUserUsage(userId: string, email?: string | null): Promi
           };
         }
 
+        // Standard users receive at least 3 free validation runs
+        if (runsLimit < 3) {
+          runsLimit = 3;
+          if (profile.runs_limit !== 3) {
+            Promise.resolve(
+              admin
+                .from('profiles')
+                .update({ runs_limit: 3, updated_at: new Date().toISOString() })
+                .eq('id', userId)
+            ).catch(() => {});
+          }
+        }
+
         return {
           userId,
           runsUsed,
@@ -157,6 +170,20 @@ export async function getUserUsage(userId: string, email?: string | null): Promi
           hasFreeRunRemaining: true,
           isUnlimited: true,
         };
+      } else {
+        // Standard user profile missing: proactively ensure profile exists with 3 free runs
+        try {
+          Promise.resolve(
+            admin.from('profiles').insert({
+              id: userId,
+              full_name: userEmail ? userEmail.split('@')[0] : 'Founder',
+              runs_limit: 3,
+              runs_used: 0,
+            })
+          ).catch(() => {});
+        } catch {
+          // ignore
+        }
       }
     } catch {
       // Supabase unavailable or table missing — continue to fallback
@@ -181,7 +208,7 @@ export async function getUserUsage(userId: string, email?: string | null): Promi
 
   const isUnlimited = isUnlimitedUser(userId, userEmail);
   const runsUsed = storeEntry.runs_used;
-  let runsLimit = isUnlimited ? UNLIMITED_RUNS_LIMIT : (storeEntry.runs_limit ?? DEFAULT_LIMIT);
+  let runsLimit = isUnlimited ? UNLIMITED_RUNS_LIMIT : Math.max(3, storeEntry.runs_limit ?? DEFAULT_LIMIT);
 
   if (isUnlimited || runsLimit >= 1000) {
     runsLimit = UNLIMITED_RUNS_LIMIT;
@@ -196,6 +223,11 @@ export async function getUserUsage(userId: string, email?: string | null): Promi
       hasFreeRunRemaining: true,
       isUnlimited: true,
     };
+  }
+
+  if (runsLimit < 3) {
+    runsLimit = 3;
+    storeEntry.runs_limit = 3;
   }
 
   return {
@@ -218,7 +250,7 @@ export async function incrementUserUsage(userId: string, email?: string | null):
   const isUnlimited = currentUsage.isUnlimited || isUnlimitedUser(userId, userEmail);
 
   const nextUsed = currentUsage.runsUsed + 1;
-  const runsLimit = isUnlimited ? UNLIMITED_RUNS_LIMIT : currentUsage.runsLimit;
+  const runsLimit = isUnlimited ? UNLIMITED_RUNS_LIMIT : Math.max(3, currentUsage.runsLimit);
 
   if (isSupabaseConfigured()) {
     try {
