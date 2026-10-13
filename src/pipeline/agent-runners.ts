@@ -5,7 +5,11 @@ import { modelFinancials } from '@/agents/financial-modeling';
 import { synthesizeResults } from '@/agents/synthesis';
 import { analyzeLegalRegulatory } from '@/agents/legal-regulatory';
 import { analyzeGlobalBenchmarks } from '@/agents/global-benchmarks';
+import { runRedTeamAnalysis } from '@/agents/red-team';
 import type { ValidationBrief } from '@/schemas/brief.schema';
+import type { Synthesis } from '@/schemas/synthesis.schema';
+import type { DriftAlertData } from '@/lib/pivot-tracker';
+import type { EnrichedContextBundle } from '@/lib/context-assembler';
 import { getDomainFixtureForIdea } from '@/lib/demo-data';
 
 type AgentStatus = 'running' | 'completed' | 'failed';
@@ -46,19 +50,41 @@ export async function saveApprovedBrief(
   }
 }
 
+/** Save detected assumption drift to DB */
+export async function saveDriftAlert(
+  admin: SupabaseClient,
+  runId: string,
+  driftAlert: DriftAlertData | null
+) {
+  if (!driftAlert) return;
+  try {
+    const { error } = await admin.from('validation_results').update({
+      drift_alert: driftAlert,
+      updated_at: new Date().toISOString(),
+    }).eq('run_id', runId);
+    if (error) {
+      console.warn(`[Save Drift Alert] DB column 'drift_alert' notice:`, error.message);
+    }
+  } catch (error) {
+    console.warn(`[Save Drift Alert] Failed for run ${runId}:`, error);
+  }
+}
+
 /** Run Agent 1 and write result to DB immediately on completion */
 export async function runCompetitorAgent(
   admin: SupabaseClient,
   runId: string,
   idea: string,
   language: string,
-  directive?: string
+  directive?: string,
+  liveSentiment?: string,
+  pitchDeckContext?: string
 ) {
   await setAgentStatus(admin, runId, 'competitor_status', 'running');
   try {
     let result;
     try {
-      result = await analyzeCompetitors(idea, language, directive);
+      result = await analyzeCompetitors(idea, language, directive, liveSentiment, pitchDeckContext);
     } catch (apiErr) {
       const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
       console.warn(`[Agent 1: Competitors] Live call issue (${msg}), using domain fixture fallback`);
@@ -87,13 +113,15 @@ export async function runTechAgent(
   runId: string,
   idea: string,
   language: string,
-  directive?: string
+  directive?: string,
+  pitchDeckContext?: string,
+  patentLandscape?: string
 ) {
   await setAgentStatus(admin, runId, 'tech_status', 'running');
   try {
     let result;
     try {
-      result = await assessTechFeasibility(idea, language, directive);
+      result = await assessTechFeasibility(idea, language, directive, pitchDeckContext, patentLandscape);
     } catch (apiErr) {
       const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
       console.warn(`[Agent 2: Tech] Live call issue (${msg}), using domain fixture fallback`);
@@ -122,13 +150,16 @@ export async function runFinancialAgent(
   runId: string,
   idea: string,
   language: string,
-  directive?: string
+  directive?: string,
+  drhpBenchmarks?: string,
+  pitchDeckContext?: string,
+  ycFrameworks?: string
 ) {
   await setAgentStatus(admin, runId, 'financial_status', 'running');
   try {
     let result;
     try {
-      result = await modelFinancials(idea, language, directive);
+      result = await modelFinancials(idea, language, directive, drhpBenchmarks, pitchDeckContext, ycFrameworks);
     } catch (apiErr) {
       const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
       console.warn(`[Agent 3: Financial] Live call issue (${msg}), using domain fixture fallback`);
@@ -151,70 +182,29 @@ export async function runFinancialAgent(
   }
 }
 
-/** Run Agent 4 and write result to DB immediately on completion */
-export async function runSynthesisAgent(
-  admin: SupabaseClient,
-  runId: string,
-  idea: string,
-  language: string,
-  agentResults: {
-    competitors: unknown;
-    tech: unknown;
-    finance: unknown;
-    legal: unknown;
-    global?: unknown;
-    brief?: unknown;
-  }
-) {
-  await setAgentStatus(admin, runId, 'synthesis_status', 'running');
-  try {
-    let result;
-    try {
-      result = await synthesizeResults({
-        idea,
-        language,
-        competitors: agentResults.competitors as Parameters<typeof synthesizeResults>[0]['competitors'],
-        tech: agentResults.tech as Parameters<typeof synthesizeResults>[0]['tech'],
-        finance: agentResults.finance as Parameters<typeof synthesizeResults>[0]['finance'],
-        legal: agentResults.legal as Parameters<typeof synthesizeResults>[0]['legal'],
-        global: agentResults.global as Parameters<typeof synthesizeResults>[0]['global'],
-        brief: agentResults.brief as Parameters<typeof synthesizeResults>[0]['brief'],
-      });
-    } catch (apiErr) {
-      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-      console.warn(`[Agent 4: Synthesis] Live call issue (${msg}), using domain fixture fallback`);
-      result = getDomainFixtureForIdea(idea).synthesis;
-    }
-
-    const { error } = await admin.from('validation_results').update({
-      synthesis: result,
-      synthesis_status: 'completed',
-      updated_at: new Date().toISOString(),
-    }).eq('run_id', runId);
-    if (error) {
-      console.warn(`[Agent 4] DB update error:`, error.message);
-    }
-    return result;
-  } catch (error) {
-    console.error(`[Agent 4: Synthesis] Failed for run ${runId}:`, error);
-    await setAgentStatus(admin, runId, 'synthesis_status', 'failed');
-    throw error;
-  }
-}
-
 /** Run Agent 5 and write result to DB immediately on completion */
 export async function runLegalAgent(
   admin: SupabaseClient,
   runId: string,
   idea: string,
   language: string,
-  directive?: string
+  directive?: string,
+  statutoryContext?: string,
+  courtPrecedents?: string,
+  pitchDeckContext?: string
 ) {
   await setAgentStatus(admin, runId, 'legal_status', 'running');
   try {
     let result;
     try {
-      result = await analyzeLegalRegulatory(idea, language, directive);
+      result = await analyzeLegalRegulatory(
+        idea,
+        language,
+        directive,
+        statutoryContext,
+        courtPrecedents,
+        pitchDeckContext
+      );
     } catch (apiErr) {
       const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
       console.warn(`[Agent 5: Legal] Live call issue (${msg}), using domain fixture fallback`);
@@ -243,13 +233,21 @@ export async function runGlobalBenchmarksAgent(
   runId: string,
   idea: string,
   language: string,
-  directive?: string
+  directive?: string,
+  macroReport?: string,
+  pitchDeckContext?: string
 ) {
   await setAgentStatus(admin, runId, 'global_status', 'running');
   try {
     let result;
     try {
-      result = await analyzeGlobalBenchmarks(idea, language, directive);
+      result = await analyzeGlobalBenchmarks(
+        idea,
+        language,
+        directive,
+        macroReport,
+        pitchDeckContext
+      );
     } catch (apiErr) {
       const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
       console.warn(`[Agent 6: Global Precedents] Live call issue (${msg}), using domain fixture fallback`);
@@ -263,12 +261,113 @@ export async function runGlobalBenchmarksAgent(
     }).eq('run_id', runId);
 
     if (error) {
-      console.warn(`[Agent 6: Global Precedents] Note: Could not update global_benchmarks in DB (${error.message}). Migration 010 should be applied in Supabase.`);
+      console.warn(`[Agent 6: Global Precedents] Note: Could not update global_benchmarks in DB (${error.message}).`);
     }
     return result;
   } catch (error) {
     console.error(`[Agent 6: Global Precedents] Failed for run ${runId}:`, error);
     await setAgentStatus(admin, runId, 'global_status', 'failed');
+    throw error;
+  }
+}
+
+/** Run Agent 4: Synthesis with Enriched Multi-Source Dossier */
+export async function runSynthesisAgent(
+  admin: SupabaseClient,
+  runId: string,
+  idea: string,
+  language: string,
+  agentResults: {
+    competitors: unknown;
+    tech: unknown;
+    finance: unknown;
+    legal: unknown;
+    global?: unknown;
+    brief?: unknown;
+  },
+  contextBundle?: Partial<EnrichedContextBundle>
+) {
+  await setAgentStatus(admin, runId, 'synthesis_status', 'running');
+  try {
+    let result: Synthesis;
+    try {
+      result = await synthesizeResults({
+        idea,
+        language,
+        competitors: agentResults.competitors as Parameters<typeof synthesizeResults>[0]['competitors'],
+        tech: agentResults.tech as Parameters<typeof synthesizeResults>[0]['tech'],
+        finance: agentResults.finance as Parameters<typeof synthesizeResults>[0]['finance'],
+        legal: agentResults.legal as Parameters<typeof synthesizeResults>[0]['legal'],
+        global: agentResults.global as Parameters<typeof synthesizeResults>[0]['global'],
+        brief: agentResults.brief as Parameters<typeof synthesizeResults>[0]['brief'],
+        pitchDeckContext: contextBundle?.pitchDeckContext,
+        vcMemos: contextBundle?.vcMemos,
+        drhpBenchmarks: contextBundle?.drhpBenchmarks,
+        statutoryContext: contextBundle?.statutoryContext,
+        patentLandscape: contextBundle?.patentLandscape,
+        ycFrameworks: contextBundle?.ycFrameworks,
+        macroReport: contextBundle?.macroReport,
+        driftAlert: contextBundle?.driftAlert,
+      });
+    } catch (apiErr) {
+      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+      console.warn(`[Agent 4: Synthesis] Live call issue (${msg}), using domain fixture fallback`);
+      result = getDomainFixtureForIdea(idea).synthesis;
+    }
+
+    const { error } = await admin.from('validation_results').update({
+      synthesis: result,
+      synthesis_status: 'completed',
+      updated_at: new Date().toISOString(),
+    }).eq('run_id', runId);
+    if (error) {
+      console.warn(`[Agent 4] DB update error:`, error.message);
+    }
+    return result;
+  } catch (error) {
+    console.error(`[Agent 4: Synthesis] Failed for run ${runId}:`, error);
+    await setAgentStatus(admin, runId, 'synthesis_status', 'failed');
+    throw error;
+  }
+}
+
+/** Run Agent 7: Adversarial Red-Team Analysis */
+export async function runRedTeamAgent(
+  admin: SupabaseClient,
+  runId: string,
+  idea: string,
+  language: string,
+  synthesis: Synthesis,
+  brief?: ValidationBrief | null,
+  pitchDeckContext?: string,
+  patentLandscape?: string,
+  ycFrameworks?: string
+) {
+  await setAgentStatus(admin, runId, 'red_team_status', 'running');
+  try {
+    const result = await runRedTeamAnalysis({
+      idea,
+      language,
+      synthesis,
+      brief,
+      pitchDeckContext,
+      patentLandscape,
+      ycFrameworks,
+    });
+
+    const { error } = await admin.from('validation_results').update({
+      red_team: result,
+      red_team_status: 'completed',
+      updated_at: new Date().toISOString(),
+    }).eq('run_id', runId);
+
+    if (error) {
+      console.warn(`[Agent 7: Red-Team] DB update notice:`, error.message);
+    }
+    return result;
+  } catch (error) {
+    console.error(`[Agent 7: Red-Team] Failed for run ${runId}:`, error);
+    await setAgentStatus(admin, runId, 'red_team_status', 'failed');
     throw error;
   }
 }

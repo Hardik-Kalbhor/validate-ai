@@ -13,6 +13,7 @@ const RequestSchema = z.object({
   language: z.enum(['en', 'hi', 'mr']).default('en'),
   approvedBrief: ValidationBriefSchema.optional(),
   brief: ValidationBriefSchema.optional(),
+  pitchDeckText: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -90,7 +91,14 @@ export async function POST(req: NextRequest) {
         await incrementUserUsage(user.id, user.email);
 
         // Fire-and-forget pipeline
-        runValidationPipeline(run.id, body.idea, body.language, finalBrief).catch((err) => {
+        runValidationPipeline(
+          run.id,
+          body.idea,
+          body.language,
+          finalBrief,
+          body.pitchDeckText,
+          user.id
+        ).catch((err) => {
           console.error(`[Pipeline] Run ${run.id} failed:`, err);
         });
       }
@@ -116,7 +124,14 @@ export async function POST(req: NextRequest) {
       await incrementUserUsage(user.id, user.email);
 
       // Fire-and-forget real in-memory agent pipeline
-      runInMemoryPipeline(runId, body.idea, body.language, finalBrief).catch((err) => {
+      runInMemoryPipeline(
+        runId,
+        body.idea,
+        body.language,
+        finalBrief,
+        body.pitchDeckText,
+        user.id
+      ).catch((err) => {
         console.error(`[In-Memory Pipeline] Run ${runId} failed:`, err);
       });
     }

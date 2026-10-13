@@ -54,7 +54,7 @@ function AgentStatusPlaceholder({ status, label }: { status?: string; label: str
 }
 
 export function ResultsTabs({ runId, initialRun, initialResults }: Props) {
-  const { results } = useValidationRun(runId, initialRun, initialResults);
+  const { run, results } = useValidationRun(runId, initialRun, initialResults);
 
   const tabs = [
     { value: 'competitors', label: 'Competitors', status: results?.competitor_status, data: results?.competitors },
@@ -86,7 +86,7 @@ export function ResultsTabs({ runId, initialRun, initialResults }: Props) {
 
       <TabsContent value="tech" className="mt-4">
         {results?.tech_status === 'completed' && results.tech_feasibility
-          ? <TechFeasibilityView data={results.tech_feasibility as TechFeasibility} />
+          ? <TechFeasibilityView data={results.tech_feasibility as TechFeasibility} ideaText={run?.idea_text} />
           : <AgentStatusPlaceholder status={results?.tech_status} label="Tech Feasibility" />}
       </TabsContent>
 

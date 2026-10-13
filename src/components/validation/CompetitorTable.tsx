@@ -51,6 +51,18 @@ export function CompetitorTable({ data }: Props) {
                   {' — '}{c.pricing.pricing_details}
                 </p>
               </div>
+              {c.features && c.features.length > 0 && (
+                <div>
+                  <p className="font-medium text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Key Features</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {c.features.map((feat) => (
+                      <Badge key={feat} variant="outline" className="text-xs bg-muted/30">
+                        {feat}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="font-medium text-green-700 mb-1">Strengths</p>

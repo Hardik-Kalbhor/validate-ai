@@ -5,6 +5,8 @@ import type { LegalRegulatory } from '@/schemas/legal-regulatory.schema';
 import type { GlobalPrecedents } from '@/schemas/global-precedents.schema';
 import type { Synthesis } from '@/schemas/synthesis.schema';
 import type { ValidationBrief } from '@/schemas/brief.schema';
+import type { RedTeamAnalysis } from '@/schemas/red-team.schema';
+import type { DriftAlertData } from './pivot-tracker';
 
 export interface PendingRun {
   id: string;
@@ -36,6 +38,9 @@ export interface PendingResults {
   global_status: AgentExecutionStatus;
   synthesis: Synthesis | null;
   synthesis_status: AgentExecutionStatus;
+  red_team: RedTeamAnalysis | null;
+  red_team_status: AgentExecutionStatus;
+  drift_alert?: DriftAlertData | null;
   updated_at: string;
 }
 
@@ -72,6 +77,9 @@ export function initPendingResults(runId: string): PendingResults {
     global_status: 'pending',
     synthesis: null,
     synthesis_status: 'pending',
+    red_team: null,
+    red_team_status: 'pending',
+    drift_alert: null,
     updated_at: new Date().toISOString(),
   };
 }

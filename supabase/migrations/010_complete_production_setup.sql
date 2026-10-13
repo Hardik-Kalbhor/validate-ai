@@ -17,10 +17,13 @@ ALTER TABLE validation_results
   ADD COLUMN IF NOT EXISTS global_benchmarks JSONB,
   ADD COLUMN IF NOT EXISTS global_status     agent_status NOT NULL DEFAULT 'pending';
 
--- 3. Add Phase 0 Idea Brief columns to validation_results
+-- 3. Add Phase 0 Idea Brief & Agent 7 Red-Team columns to validation_results
 ALTER TABLE validation_results
   ADD COLUMN IF NOT EXISTS brief             JSONB,
-  ADD COLUMN IF NOT EXISTS brief_status      agent_status NOT NULL DEFAULT 'completed';
+  ADD COLUMN IF NOT EXISTS brief_status      agent_status NOT NULL DEFAULT 'completed',
+  ADD COLUMN IF NOT EXISTS red_team          JSONB,
+  ADD COLUMN IF NOT EXISTS red_team_status   agent_status NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS drift_alert       JSONB;
 
 -- 4. Set default free runs limit to 3 for profiles
 ALTER TABLE profiles ALTER COLUMN runs_limit SET DEFAULT 3;

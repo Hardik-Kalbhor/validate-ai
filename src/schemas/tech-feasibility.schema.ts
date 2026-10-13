@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+export const PatentCitationSchema = z.object({
+  patent_number: z.string(),
+  title: z.string(),
+  assignee: z.string(),
+  fto_risk: z.enum(['low', 'medium', 'high', 'critical']),
+  defensive_workaround: z.string(),
+});
+
+export type PatentCitation = z.infer<typeof PatentCitationSchema>;
+
 export const TechFeasibilitySchema = z.object({
   business_type: z.enum(['online', 'offline', 'hybrid']),
   technology_stack: z.object({
@@ -19,6 +29,7 @@ export const TechFeasibilitySchema = z.object({
   build_vs_buy: z.string(),
   scalability_notes: z.string(),
   niche_unique_technologies: z.array(z.string()).min(3).max(8),
+  patent_landscape: z.array(PatentCitationSchema).optional(),
 });
 
 export type TechFeasibility = z.infer<typeof TechFeasibilitySchema>;

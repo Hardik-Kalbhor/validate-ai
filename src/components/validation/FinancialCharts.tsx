@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatINRCompact, formatINR } from '@/lib/utils';
 import type { FinancialModel } from '@/schemas/financial-model.schema';
 import { FinancialBmcView } from './FinancialBmcView';
-import { ArrowUpRight, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, TrendingUp, Coins } from 'lucide-react';
 
 interface Props {
   data: FinancialModel;
@@ -85,17 +85,19 @@ export function FinancialCharts({ data }: Props) {
   return (
     <div className="space-y-6">
       {/* ── Key Metrics ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
         {[
           { label: 'Break-Even', value: `${data.break_even_months} months` },
           { label: 'Gross Margin', value: `${cs.gross_margin_percent}%` },
+          { label: 'Initial CapEx', value: formatINRCompact(cs.initial_investment) },
+          { label: 'Monthly OpEx', value: formatINRCompact(cs.monthly_opex) },
           { label: 'CAC (Acquisition)', value: formatINR(cs.cac) },
           { label: 'LTV (Lifetime Value)', value: formatINR(cs.ltv) },
         ].map(({ label, value }) => (
           <Card key={label}>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="text-lg font-bold mt-1 text-foreground">{value}</p>
+            <CardContent className="p-3.5">
+              <p className="text-[11px] text-muted-foreground">{label}</p>
+              <p className="text-base font-bold mt-0.5 text-foreground">{value}</p>
             </CardContent>
           </Card>
         ))}
@@ -257,6 +259,15 @@ export function FinancialCharts({ data }: Props) {
             </p>
             <p className="text-muted-foreground leading-relaxed">{data.india_market_notes}</p>
           </div>
+          {data.funding_insights && (
+            <div className="border-t border-border pt-3">
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <Coins className="h-3.5 w-3.5 text-primary" />
+                Venture Capital & Funding Climate
+              </p>
+              <p className="text-muted-foreground leading-relaxed">{data.funding_insights}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

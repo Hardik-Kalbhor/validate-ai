@@ -14,6 +14,8 @@ import { FinancialCharts } from './FinancialCharts';
 import { LegalComplianceView } from './LegalComplianceView';
 import { GlobalBenchmarksView } from './GlobalBenchmarksView';
 import { SynthesisView } from './SynthesisView';
+import { DriftAlert } from './DriftAlert';
+import { RedTeamPanel } from './RedTeamPanel';
 import type { CompetitorAnalysis } from '@/schemas/competitor.schema';
 import type { TechFeasibility } from '@/schemas/tech-feasibility.schema';
 import type { FinancialModel } from '@/schemas/financial-model.schema';
@@ -21,6 +23,8 @@ import type { LegalRegulatory } from '@/schemas/legal-regulatory.schema';
 import type { GlobalPrecedents } from '@/schemas/global-precedents.schema';
 import type { Synthesis } from '@/schemas/synthesis.schema';
 import type { ValidationBrief } from '@/schemas/brief.schema';
+import type { RedTeamAnalysis } from '@/schemas/red-team.schema';
+import type { DriftAlertData } from '@/lib/pivot-tracker';
 import {
   Search,
   Cpu,
@@ -139,7 +143,7 @@ function AgentStatusPlaceholder({ status, label }: { status?: string; label: str
 }
 
 export function UnifiedResultsView({ runId, initialRun, initialResults }: Props) {
-  const { results, isLoading } = useValidationRun(runId, initialRun, initialResults);
+  const { run, results, isLoading } = useValidationRun(runId, initialRun, initialResults);
   const [activeTab, setActiveTab] = useState<TabKey>('competitors');
   const [viewMode, setViewMode] = useState<'tabs' | 'all'>('tabs');
 
@@ -185,6 +189,11 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
             </Button>
           </div>
         </div>
+
+        {/* ── Cross-Run Strategic Drift Banner ── */}
+        {Boolean(results?.drift_alert) && (
+          <DriftAlert drift={results!.drift_alert as DriftAlertData} />
+        )}
 
         {/* ── Agent Status Header Cards (Clickable Quick-Jump) ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -327,7 +336,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
 
           <TabsContent value="tech" className="mt-4">
             {results?.tech_status === 'completed' && results.tech_feasibility ? (
-              <TechFeasibilityView data={results.tech_feasibility as TechFeasibility} />
+              <TechFeasibilityView data={results.tech_feasibility as TechFeasibility} ideaText={run?.idea_text} />
             ) : (
               <AgentStatusPlaceholder
                 status={results?.tech_status}
@@ -369,9 +378,14 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
             )}
           </TabsContent>
 
-          <TabsContent value="synthesis" className="mt-4">
+          <TabsContent value="synthesis" className="mt-4 space-y-6">
             {results?.synthesis_status === 'completed' && results.synthesis ? (
-              <SynthesisView data={results.synthesis as Synthesis} />
+              <>
+                <SynthesisView data={results.synthesis as Synthesis} />
+                {Boolean(results?.red_team) && (
+                  <RedTeamPanel analysis={results!.red_team as RedTeamAnalysis} />
+                )}
+              </>
             ) : (
               <AgentStatusPlaceholder
                 status={results?.synthesis_status}
@@ -406,7 +420,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
               <h2 className="text-lg font-bold">2. Technical Architecture & Feasibility</h2>
             </div>
             {results?.tech_status === 'completed' && results.tech_feasibility ? (
-              <TechFeasibilityView data={results.tech_feasibility as TechFeasibility} />
+              <TechFeasibilityView data={results.tech_feasibility as TechFeasibility} ideaText={run?.idea_text} />
             ) : (
               <AgentStatusPlaceholder
                 status={results?.tech_status}
@@ -478,6 +492,13 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
               />
             )}
           </section>
+
+          {/* Section 7: Adversarial Red-Team */}
+          {Boolean(results?.red_team) && (
+            <section id="section-red-team" className="space-y-3 pt-2">
+              <RedTeamPanel analysis={results!.red_team as RedTeamAnalysis} />
+            </section>
+          )}
         </div>
       )}
     </div>

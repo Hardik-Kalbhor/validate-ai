@@ -14,9 +14,13 @@ export interface ValidationRun {
   completed_at: string | null;
 }
 
+import type { ValidationBrief } from '@/schemas/brief.schema';
+import type { RedTeamAnalysis } from '@/schemas/red-team.schema';
+import type { DriftAlertData } from '@/lib/pivot-tracker';
+
 export interface ValidationResults {
   run_id: string;
-  brief?: unknown;
+  brief?: ValidationBrief | null;
   brief_status?: string;
   competitors: unknown;
   competitor_status: string;
@@ -30,6 +34,9 @@ export interface ValidationResults {
   legal_status: string;
   global_benchmarks: unknown;
   global_status: string;
+  red_team?: RedTeamAnalysis | null;
+  red_team_status?: string;
+  drift_alert?: DriftAlertData | null;
   updated_at: string;
 }
 

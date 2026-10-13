@@ -82,6 +82,54 @@ export function SynthesisView({ data }: Props) {
           ))}
         </div>
       </div>
+
+      {/* Strategic Opportunities */}
+      {data.top_opportunities && data.top_opportunities.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-sm mb-3">Top Strategic Opportunities</h3>
+          <div className="space-y-2">
+            {data.top_opportunities.map((opp, i) => (
+              <Card key={i}>
+                <CardContent className="p-4 text-sm space-y-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <p className="font-medium text-foreground">{opp.opportunity}</p>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Badge variant="outline" className="capitalize text-[10px]">
+                        {opp.timeframe}
+                      </Badge>
+                      <Badge
+                        variant={opp.impact === 'high' ? 'default' : 'secondary'}
+                        className="capitalize text-[10px]"
+                      >
+                        {opp.impact} Impact
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Founder Improvement Suggestions */}
+      {data.improvement_suggestions && data.improvement_suggestions.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Strategic Improvements & Founder Optimizations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="text-sm space-y-1.5">
+              {data.improvement_suggestions.map((sug, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                  <span className="text-muted-foreground">{sug}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

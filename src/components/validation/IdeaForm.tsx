@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import { ContactModal } from '@/components/validation/ContactModal';
 import { DeconstructedBriefReview } from '@/components/validation/DeconstructedBriefReview';
+import { PitchDeckUpload } from '@/components/validation/PitchDeckUpload';
 import type { ValidationBrief } from '@/schemas/brief.schema';
 
 const schema = z.object({
@@ -50,6 +51,7 @@ export function IdeaForm({ initialUsage, userEmail, userName }: IdeaFormProps) {
   const [isDeconstructing, setIsDeconstructing] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [brief, setBrief] = useState<ValidationBrief | null>(null);
+  const [pitchDeckText, setPitchDeckText] = useState<string | null>(null);
 
   const { register, handleSubmit, setValue, getValues, control, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -134,6 +136,7 @@ export function IdeaForm({ initialUsage, userEmail, userName }: IdeaFormProps) {
           idea: values.idea,
           language: values.language,
           approvedBrief,
+          pitchDeckText: pitchDeckText || undefined,
         }),
       });
 
@@ -250,6 +253,21 @@ export function IdeaForm({ initialUsage, userEmail, userName }: IdeaFormProps) {
                     {(idea || '').length} / 130 min chars
                   </span>
                 </div>
+              </div>
+
+              {/* Pitch Deck / Document Attachment (Optional) */}
+              <div className="space-y-1.5">
+                <PitchDeckUpload
+                  onTextExtracted={(text, name) => {
+                    setPitchDeckText(text);
+                    toast.success(`Attached "${name}" (${Math.round(text.length / 4).toLocaleString()} tokens)`);
+                  }}
+                  onClear={() => {
+                    setPitchDeckText(null);
+                    toast.info('Pitch deck attachment removed');
+                  }}
+                  disabled={isDeconstructing}
+                />
               </div>
 
               <div className="space-y-2">

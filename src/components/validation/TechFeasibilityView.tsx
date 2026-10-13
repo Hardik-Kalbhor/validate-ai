@@ -4,10 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Progress } from '@/components/ui/progress';
-import { Cpu } from 'lucide-react';
+import { Cpu, ShieldAlert } from 'lucide-react';
 import type { TechFeasibility } from '@/schemas/tech-feasibility.schema';
+import { getStructuredPatentsForIdea } from '@/lib/patent-search';
 
-interface Props { data: TechFeasibility }
+interface Props {
+  data: TechFeasibility;
+  ideaText?: string;
+}
 
 const complexityLabel = (score: number) => {
   if (score <= 3) return { label: 'Low', color: 'text-green-600' };
@@ -15,8 +19,12 @@ const complexityLabel = (score: number) => {
   return { label: 'High', color: 'text-red-600' };
 };
 
-export function TechFeasibilityView({ data }: Props) {
+export function TechFeasibilityView({ data, ideaText }: Props) {
   const { label, color } = complexityLabel(data.complexity_score);
+  const patents = (data.patent_landscape && data.patent_landscape.length > 0)
+    ? data.patent_landscape
+    : getStructuredPatentsForIdea(ideaText);
+
 
   return (
     <div className="space-y-4">
@@ -92,6 +100,57 @@ export function TechFeasibilityView({ data }: Props) {
                 </li>
               ))}
             </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Patent Landscape & Freedom-to-Operate (FTO) */}
+      {patents && patents.length > 0 && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-amber-500" />
+              Patent Landscape & Freedom-to-Operate (FTO)
+              <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-[10px] ml-auto">
+                Prior Art Citations
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {patents.map((patent) => (
+              <div
+                key={patent.patent_number}
+                className="rounded-lg border border-border/60 bg-background/50 p-3 space-y-2 text-sm"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-semibold text-foreground flex items-center gap-1.5">
+                    <span>{patent.patent_number}</span>
+                    <span className="text-muted-foreground font-normal">· {patent.title}</span>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={
+                      patent.fto_risk === 'critical'
+                        ? 'bg-red-500/20 text-red-500 border-red-500/30 text-[10px]'
+                        : patent.fto_risk === 'high'
+                        ? 'bg-amber-500/20 text-amber-500 border-amber-500/30 text-[10px]'
+                        : patent.fto_risk === 'medium'
+                        ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30 text-[10px]'
+                        : 'bg-green-500/20 text-green-500 border-green-500/30 text-[10px]'
+                    }
+                  >
+                    {patent.fto_risk.toUpperCase()} FTO RISK
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Assignee / Owner:</span> {patent.assignee}
+                </p>
+                <div className="rounded bg-muted/40 p-2.5 text-xs space-y-1">
+                  <span className="font-semibold text-primary block">Defensive Engineering Workaround:</span>
+                  <span className="text-muted-foreground leading-relaxed block">{patent.defensive_workaround}</span>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}

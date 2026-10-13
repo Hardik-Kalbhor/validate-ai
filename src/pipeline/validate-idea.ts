@@ -6,22 +6,29 @@ import {
   runSynthesisAgent,
   runLegalAgent,
   runGlobalBenchmarksAgent,
+  runRedTeamAgent,
   saveApprovedBrief,
+  saveDriftAlert,
 } from './agent-runners';
 import type { ValidationBrief } from '@/schemas/brief.schema';
+import { assembleEnrichedContext } from '@/lib/context-assembler';
 
 /**
  * Main validation pipeline orchestrator.
- * Runs Agents 1, 2, 3, 5, 6 in PARALLEL using the approved Phase 0 brief, then Agent 4 (Synthesis) sequentially.
- * Each agent writes to DB as it completes — Supabase Realtime pushes updates to UI.
+ * 1. Assembles multi-source context (Statutory corpus, DRHP benchmarks, VC memos, App Store/Reddit sentiment).
+ * 2. Runs Agents 1, 2, 3, 5, 6 in PARALLEL using the approved Phase 0 brief + enriched context.
+ * 3. Runs Agent 4 (Synthesis) sequentially with full multi-source dossier.
+ * 4. Runs Agent 7 (Adversarial Red-Team) sequentially to stress-test the synthesis verdict.
  *
- * Called as fire-and-forget from the API route — no return value needed.
+ * Each agent writes to DB as it completes — Supabase Realtime pushes updates to UI.
  */
 export async function runValidationPipeline(
   runId: string,
   idea: string,
   language: string,
-  approvedBrief?: ValidationBrief
+  approvedBrief?: ValidationBrief,
+  pitchDeckText?: string,
+  userId?: string
 ): Promise<void> {
   const admin = createAdminClient();
 
@@ -37,13 +44,69 @@ export async function runValidationPipeline(
   }
 
   try {
-    // ── Phase 1: Run Agents 1, 2, 3, 5, 6 in parallel with tailored directives ──
+    // ── Step 0: Assemble multi-source enriched context bundle ────────
+    const context = await assembleEnrichedContext({
+      runId,
+      idea,
+      brief: approvedBrief,
+      pitchDeckText,
+      userId,
+      admin,
+    });
+
+    if (context.driftAlert) {
+      await saveDriftAlert(admin, runId, context.driftAlert);
+    }
+
+    // ── Phase 1: Run Agents 1, 2, 3, 5, 6 in parallel with tailored directives & knowledge packs ──
     const [competitors, tech, finance, legal, global] = await Promise.allSettled([
-      runCompetitorAgent(admin, runId, idea, language, approvedBrief?.agent_directives?.competitor_focus),
-      runTechAgent(admin, runId, idea, language, approvedBrief?.agent_directives?.tech_focus),
-      runFinancialAgent(admin, runId, idea, language, approvedBrief?.agent_directives?.financial_focus),
-      runLegalAgent(admin, runId, idea, language, approvedBrief?.agent_directives?.legal_focus),
-      runGlobalBenchmarksAgent(admin, runId, idea, language, approvedBrief?.agent_directives?.global_focus),
+      runCompetitorAgent(
+        admin,
+        runId,
+        idea,
+        language,
+        approvedBrief?.agent_directives?.competitor_focus,
+        context.liveSentiment,
+        context.pitchDeckContext
+      ),
+      runTechAgent(
+        admin,
+        runId,
+        idea,
+        language,
+        approvedBrief?.agent_directives?.tech_focus,
+        context.pitchDeckContext,
+        context.patentLandscape
+      ),
+      runFinancialAgent(
+        admin,
+        runId,
+        idea,
+        language,
+        approvedBrief?.agent_directives?.financial_focus,
+        context.drhpBenchmarks,
+        context.pitchDeckContext,
+        context.ycFrameworks
+      ),
+      runLegalAgent(
+        admin,
+        runId,
+        idea,
+        language,
+        approvedBrief?.agent_directives?.legal_focus,
+        context.statutoryContext,
+        context.courtPrecedents,
+        context.pitchDeckContext
+      ),
+      runGlobalBenchmarksAgent(
+        admin,
+        runId,
+        idea,
+        language,
+        approvedBrief?.agent_directives?.global_focus,
+        context.macroReport,
+        context.pitchDeckContext
+      ),
     ]);
 
     // Extract results (null if agent failed — synthesis handles gracefully)
@@ -56,8 +119,28 @@ export async function runValidationPipeline(
       brief: approvedBrief ?? null,
     };
 
-    // ── Phase 2: Synthesis (needs all results as context) ──────────
-    await runSynthesisAgent(admin, runId, idea, language, agentResults);
+    // ── Phase 2: Synthesis (sequential, needs all agent results + VC memo patterns) ──────────
+    const synthesis = await runSynthesisAgent(
+      admin,
+      runId,
+      idea,
+      language,
+      agentResults,
+      context
+    );
+
+    // ── Phase 3: Adversarial Red-Team (Agent 7, stress-tests the verdict) ────────────────────
+    await runRedTeamAgent(
+      admin,
+      runId,
+      idea,
+      language,
+      synthesis,
+      approvedBrief ?? null,
+      context.pitchDeckContext,
+      context.patentLandscape,
+      context.ycFrameworks
+    );
 
     // ── Mark run complete ─────────────────────────────────────────────
     await admin.from('validation_runs').update({

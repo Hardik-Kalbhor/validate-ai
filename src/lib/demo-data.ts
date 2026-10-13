@@ -192,6 +192,29 @@ export const DEMO_RESULTS: Record<string, Record<string, unknown>> = {
         'Upstash Redis distributed locks — cook capacity enforcement (max 25 orders/cook) in real-time',
         'Tamper-Evident QR Code tokens — contactless delivery drop-off verification at customer door',
       ],
+      patent_landscape: [
+        {
+          patent_number: 'US11288629B2 / IN202111018442',
+          title: 'Autonomous Demand-Supply Matchmaking Engine for Perishable Freight with Real-Time Quality Degradation Indexing',
+          assignee: 'Uber Technologies / Lineage Logistics (2021)',
+          fto_risk: 'medium',
+          defensive_workaround: 'Implement buyer-initiated direct requests with fixed contractual grading standards (e.g. AGMARK or FSSAI grade A/B/C) rather than proprietary dynamic automated algorithmic Dutch auctions.',
+        },
+        {
+          patent_number: 'US10740722B1 / IN201821045231',
+          title: 'Multi-Party Escrow Settlement Architecture for Agricultural Supply Chains with Automated Quality Inspection Gateways',
+          assignee: 'Deere & Company / Trimble Inc. (2020)',
+          fto_risk: 'high',
+          defensive_workaround: 'Utilize standard manual digital Goods Received Notes (GRN) counter-signed by physical quality inspection officers integrated through authorized RBI Payment Aggregator escrow APIs (e.g. Razorpay Route / Cashfree).',
+        },
+        {
+          patent_number: 'US10929841B2 / IN201941032891',
+          title: 'Decentralized Cold Chain Telemetry System with Intermittent Connectivity Edge Buffering',
+          assignee: 'Carrier Corporation / Emerson Climate Technologies (2019)',
+          fto_risk: 'high',
+          defensive_workaround: 'Adopt open-standard MQTT-SN protocols over LoRaWAN with standard open-source SQLite edge persistence; avoid proprietary multi-depth thermal decay proprietary metrics.',
+        },
+      ],
     },
     financial_model: {
       market_size_inr: {

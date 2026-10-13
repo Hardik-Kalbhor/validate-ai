@@ -39,8 +39,8 @@ export const hasGeminiApiKey = Boolean(
 
 /**
  * Unified safety timeout for all validation agents (in milliseconds).
- * Defaults to 90 seconds (90,000ms), giving plenty of headroom for complex
- * structured JSON schemas while preventing indefinite hangs.
+ * Defaults to 180 seconds (180,000ms), giving plenty of headroom for rich
+ * multi-source context injection and structured JSON schemas while preventing indefinite hangs.
  */
-export const AGENT_TIMEOUT_MS = Number(process.env.AGENT_TIMEOUT_MS) || 90000;
+export const AGENT_TIMEOUT_MS = Number(process.env.AGENT_TIMEOUT_MS) || 180000;
 
