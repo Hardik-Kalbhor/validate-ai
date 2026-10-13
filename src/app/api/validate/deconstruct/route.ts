@@ -50,15 +50,26 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 3. Deconstruct Idea (No Quota Decremented) ───────────────────
+    if (!hasGeminiApiKey) {
+      return NextResponse.json({ brief: generateMockBrief(body.idea) });
+    }
+
     try {
-      if (!hasGeminiApiKey) {
-        return NextResponse.json({ brief: generateMockBrief(body.idea) });
-      }
       const brief = await deconstructIdea(body.idea, body.language);
       return NextResponse.json({ brief });
     } catch (agentError) {
-      console.warn('[Deconstruct API] Gemini agent failed, falling back to heuristic brief:', agentError);
-      return NextResponse.json({ brief: generateMockBrief(body.idea) });
+      console.warn('[Deconstruct API] Gemini agent attempt 1 failed, retrying...', agentError);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const brief = await deconstructIdea(body.idea, body.language);
+        return NextResponse.json({ brief });
+      } catch (retryError) {
+        console.error('[Deconstruct API] Gemini agent failed after retry:', retryError);
+        return NextResponse.json(
+          { error: 'AI Idea Framing temporarily unavailable. Please try again in a few moments.' },
+          { status: 503 }
+        );
+      }
     }
   } catch (error) {
     console.error('Error in POST /api/validate/deconstruct:', error);

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { getDomainFixtureForIdea } from '@/lib/demo-data';
 
 export interface ValidationRun {
   id: string;
@@ -59,18 +58,7 @@ function enrichResults(
     if (enriched.global_benchmarks) {
       enriched.global_status = 'completed';
     } else if (isSynthesisDone || isRunDone) {
-      // Parallel Phase 1 has completed since Synthesis runs sequentially in Phase 2
-      if (currentRun?.idea_text) {
-        try {
-          const fixture = getDomainFixtureForIdea(currentRun.idea_text);
-          enriched.global_benchmarks = fixture.global;
-          enriched.global_status = 'completed';
-        } catch {
-          enriched.global_status = 'completed';
-        }
-      } else {
-        enriched.global_status = 'completed';
-      }
+      enriched.global_status = enriched.global_benchmarks ? 'completed' : 'failed';
     }
   }
 

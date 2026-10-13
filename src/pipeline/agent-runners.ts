@@ -10,7 +10,6 @@ import type { ValidationBrief } from '@/schemas/brief.schema';
 import type { Synthesis } from '@/schemas/synthesis.schema';
 import type { DriftAlertData } from '@/lib/pivot-tracker';
 import type { EnrichedContextBundle } from '@/lib/context-assembler';
-import { getDomainFixtureForIdea } from '@/lib/demo-data';
 
 type AgentStatus = 'running' | 'completed' | 'failed';
 
@@ -86,9 +85,9 @@ export async function runCompetitorAgent(
     try {
       result = await analyzeCompetitors(idea, language, directive, liveSentiment, pitchDeckContext);
     } catch (apiErr) {
-      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-      console.warn(`[Agent 1: Competitors] Live call issue (${msg}), using domain fixture fallback`);
-      result = getDomainFixtureForIdea(idea).competitors;
+      console.warn(`[Agent 1: Competitors] Live call attempt 1 failed (${apiErr}), retrying...`);
+      await new Promise((r) => setTimeout(r, 2000));
+      result = await analyzeCompetitors(idea, language, directive, liveSentiment, pitchDeckContext);
     }
 
     const { error } = await admin.from('validation_results').update({
@@ -123,9 +122,9 @@ export async function runTechAgent(
     try {
       result = await assessTechFeasibility(idea, language, directive, pitchDeckContext, patentLandscape);
     } catch (apiErr) {
-      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-      console.warn(`[Agent 2: Tech] Live call issue (${msg}), using domain fixture fallback`);
-      result = getDomainFixtureForIdea(idea).tech;
+      console.warn(`[Agent 2: Tech] Live call attempt 1 failed (${apiErr}), retrying...`);
+      await new Promise((r) => setTimeout(r, 2000));
+      result = await assessTechFeasibility(idea, language, directive, pitchDeckContext, patentLandscape);
     }
 
     const { error } = await admin.from('validation_results').update({
@@ -161,9 +160,9 @@ export async function runFinancialAgent(
     try {
       result = await modelFinancials(idea, language, directive, drhpBenchmarks, pitchDeckContext, ycFrameworks);
     } catch (apiErr) {
-      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-      console.warn(`[Agent 3: Financial] Live call issue (${msg}), using domain fixture fallback`);
-      result = getDomainFixtureForIdea(idea).finance;
+      console.warn(`[Agent 3: Financial] Live call attempt 1 failed (${apiErr}), retrying...`);
+      await new Promise((r) => setTimeout(r, 2000));
+      result = await modelFinancials(idea, language, directive, drhpBenchmarks, pitchDeckContext, ycFrameworks);
     }
 
     const { error } = await admin.from('validation_results').update({
@@ -206,9 +205,16 @@ export async function runLegalAgent(
         pitchDeckContext
       );
     } catch (apiErr) {
-      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-      console.warn(`[Agent 5: Legal] Live call issue (${msg}), using domain fixture fallback`);
-      result = getDomainFixtureForIdea(idea).legal;
+      console.warn(`[Agent 5: Legal] Live call attempt 1 failed (${apiErr}), retrying...`);
+      await new Promise((r) => setTimeout(r, 2000));
+      result = await analyzeLegalRegulatory(
+        idea,
+        language,
+        directive,
+        statutoryContext,
+        courtPrecedents,
+        pitchDeckContext
+      );
     }
 
     const { error } = await admin.from('validation_results').update({
@@ -249,9 +255,15 @@ export async function runGlobalBenchmarksAgent(
         pitchDeckContext
       );
     } catch (apiErr) {
-      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-      console.warn(`[Agent 6: Global Precedents] Live call issue (${msg}), using domain fixture fallback`);
-      result = getDomainFixtureForIdea(idea).global;
+      console.warn(`[Agent 6: Global Precedents] Live call attempt 1 failed (${apiErr}), retrying...`);
+      await new Promise((r) => setTimeout(r, 2000));
+      result = await analyzeGlobalBenchmarks(
+        idea,
+        language,
+        directive,
+        macroReport,
+        pitchDeckContext
+      );
     }
 
     const { error } = await admin.from('validation_results').update({
@@ -310,9 +322,26 @@ export async function runSynthesisAgent(
         driftAlert: contextBundle?.driftAlert,
       });
     } catch (apiErr) {
-      const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-      console.warn(`[Agent 4: Synthesis] Live call issue (${msg}), using domain fixture fallback`);
-      result = getDomainFixtureForIdea(idea).synthesis;
+      console.warn(`[Agent 4: Synthesis] Live call attempt 1 failed (${apiErr}), retrying...`);
+      await new Promise((r) => setTimeout(r, 2000));
+      result = await synthesizeResults({
+        idea,
+        language,
+        competitors: agentResults.competitors as Parameters<typeof synthesizeResults>[0]['competitors'],
+        tech: agentResults.tech as Parameters<typeof synthesizeResults>[0]['tech'],
+        finance: agentResults.finance as Parameters<typeof synthesizeResults>[0]['finance'],
+        legal: agentResults.legal as Parameters<typeof synthesizeResults>[0]['legal'],
+        global: agentResults.global as Parameters<typeof synthesizeResults>[0]['global'],
+        brief: agentResults.brief as Parameters<typeof synthesizeResults>[0]['brief'],
+        pitchDeckContext: contextBundle?.pitchDeckContext,
+        vcMemos: contextBundle?.vcMemos,
+        drhpBenchmarks: contextBundle?.drhpBenchmarks,
+        statutoryContext: contextBundle?.statutoryContext,
+        patentLandscape: contextBundle?.patentLandscape,
+        ycFrameworks: contextBundle?.ycFrameworks,
+        macroReport: contextBundle?.macroReport,
+        driftAlert: contextBundle?.driftAlert,
+      });
     }
 
     const { error } = await admin.from('validation_results').update({

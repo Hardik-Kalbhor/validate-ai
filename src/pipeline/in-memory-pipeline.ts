@@ -13,7 +13,6 @@ import type { LegalRegulatory } from '@/schemas/legal-regulatory.schema';
 import type { GlobalPrecedents } from '@/schemas/global-precedents.schema';
 import type { ValidationBrief } from '@/schemas/brief.schema';
 import { assembleEnrichedContext } from '@/lib/context-assembler';
-import { getDomainFixtureForIdea } from '@/lib/demo-data';
 
 /**
  * In-memory validation pipeline orchestrator.
@@ -53,7 +52,6 @@ export async function runInMemoryPipeline(
 
     // Stagger requests slightly (1.2s) to avoid Google Gemini burst concurrency rate-limiting
     const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-    const fixture = getDomainFixtureForIdea(idea);
 
     // ── Phase 1: Run Agents 1, 2, 3, 5, 6 in parallel (with spaced start & directives) ──
     const [competitors, tech, finance, legal, global] = await Promise.allSettled([
@@ -70,11 +68,23 @@ export async function runInMemoryPipeline(
           updatePendingResults(runId, { competitors: res, competitor_status: 'completed' });
           return res;
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`[In-Memory Agent: Competitors] Live call issue (${msg}), using domain fixture fallback`);
-          const fallback = fixture.competitors;
-          updatePendingResults(runId, { competitors: fallback, competitor_status: 'completed' });
-          return fallback;
+          console.warn(`[In-Memory Agent: Competitors] Live call attempt 1 failed (${err}), retrying...`);
+          try {
+            await delay(2000);
+            const res = await analyzeCompetitors(
+              idea,
+              language,
+              approvedBrief?.agent_directives?.competitor_focus,
+              context.liveSentiment,
+              context.pitchDeckContext
+            );
+            updatePendingResults(runId, { competitors: res, competitor_status: 'completed' });
+            return res;
+          } catch (retryErr) {
+            console.error(`[In-Memory Agent: Competitors] Agent failed after retry:`, retryErr);
+            updatePendingResults(runId, { competitor_status: 'failed' });
+            return null;
+          }
         }
       })(),
       (async () => {
@@ -91,11 +101,23 @@ export async function runInMemoryPipeline(
           updatePendingResults(runId, { tech_feasibility: res, tech_status: 'completed' });
           return res;
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`[In-Memory Agent: Tech] Live call issue (${msg}), using domain fixture fallback`);
-          const fallback = fixture.tech;
-          updatePendingResults(runId, { tech_feasibility: fallback, tech_status: 'completed' });
-          return fallback;
+          console.warn(`[In-Memory Agent: Tech] Live call attempt 1 failed (${err}), retrying...`);
+          try {
+            await delay(2000);
+            const res = await assessTechFeasibility(
+              idea,
+              language,
+              approvedBrief?.agent_directives?.tech_focus,
+              context.pitchDeckContext,
+              context.patentLandscape
+            );
+            updatePendingResults(runId, { tech_feasibility: res, tech_status: 'completed' });
+            return res;
+          } catch (retryErr) {
+            console.error(`[In-Memory Agent: Tech] Agent failed after retry:`, retryErr);
+            updatePendingResults(runId, { tech_status: 'failed' });
+            return null;
+          }
         }
       })(),
       (async () => {
@@ -113,11 +135,24 @@ export async function runInMemoryPipeline(
           updatePendingResults(runId, { financial_model: res, financial_status: 'completed' });
           return res;
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`[In-Memory Agent: Finance] Live call issue (${msg}), using domain fixture fallback`);
-          const fallback = fixture.finance;
-          updatePendingResults(runId, { financial_model: fallback, financial_status: 'completed' });
-          return fallback;
+          console.warn(`[In-Memory Agent: Finance] Live call attempt 1 failed (${err}), retrying...`);
+          try {
+            await delay(2000);
+            const res = await modelFinancials(
+              idea,
+              language,
+              approvedBrief?.agent_directives?.financial_focus,
+              context.drhpBenchmarks,
+              context.pitchDeckContext,
+              context.ycFrameworks
+            );
+            updatePendingResults(runId, { financial_model: res, financial_status: 'completed' });
+            return res;
+          } catch (retryErr) {
+            console.error(`[In-Memory Agent: Finance] Agent failed after retry:`, retryErr);
+            updatePendingResults(runId, { financial_status: 'failed' });
+            return null;
+          }
         }
       })(),
       (async () => {
@@ -135,11 +170,24 @@ export async function runInMemoryPipeline(
           updatePendingResults(runId, { legal_regulatory: res, legal_status: 'completed' });
           return res;
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`[In-Memory Agent: Legal] Live call issue (${msg}), using domain fixture fallback`);
-          const fallback = fixture.legal;
-          updatePendingResults(runId, { legal_regulatory: fallback, legal_status: 'completed' });
-          return fallback;
+          console.warn(`[In-Memory Agent: Legal] Live call attempt 1 failed (${err}), retrying...`);
+          try {
+            await delay(2000);
+            const res = await analyzeLegalRegulatory(
+              idea,
+              language,
+              approvedBrief?.agent_directives?.legal_focus,
+              context.statutoryContext,
+              context.courtPrecedents,
+              context.pitchDeckContext
+            );
+            updatePendingResults(runId, { legal_regulatory: res, legal_status: 'completed' });
+            return res;
+          } catch (retryErr) {
+            console.error(`[In-Memory Agent: Legal] Agent failed after retry:`, retryErr);
+            updatePendingResults(runId, { legal_status: 'failed' });
+            return null;
+          }
         }
       })(),
       (async () => {
@@ -156,26 +204,38 @@ export async function runInMemoryPipeline(
           updatePendingResults(runId, { global_benchmarks: res, global_status: 'completed' });
           return res;
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`[In-Memory Agent: Global Precedents] Live call issue (${msg}), using domain fixture fallback`);
-          const fallback = fixture.global;
-          updatePendingResults(runId, { global_benchmarks: fallback, global_status: 'completed' });
-          return fallback;
+          console.warn(`[In-Memory Agent: Global Precedents] Live call attempt 1 failed (${err}), retrying...`);
+          try {
+            await delay(2000);
+            const res = await analyzeGlobalBenchmarks(
+              idea,
+              language,
+              approvedBrief?.agent_directives?.global_focus,
+              context.macroReport,
+              context.pitchDeckContext
+            );
+            updatePendingResults(runId, { global_benchmarks: res, global_status: 'completed' });
+            return res;
+          } catch (retryErr) {
+            console.error(`[In-Memory Agent: Global Precedents] Agent failed after retry:`, retryErr);
+            updatePendingResults(runId, { global_status: 'failed' });
+            return null;
+          }
         }
       })(),
     ]);
 
     const agentResults = {
-      competitors: competitors.status === 'fulfilled' ? (competitors.value as CompetitorAnalysis) : fixture.competitors,
-      tech: tech.status === 'fulfilled' ? (tech.value as TechFeasibility) : fixture.tech,
-      finance: finance.status === 'fulfilled' ? (finance.value as FinancialModel) : fixture.finance,
-      legal: legal.status === 'fulfilled' ? (legal.value as LegalRegulatory) : fixture.legal,
-      global: global.status === 'fulfilled' ? (global.value as GlobalPrecedents) : fixture.global,
+      competitors: competitors.status === 'fulfilled' ? competitors.value : null,
+      tech: tech.status === 'fulfilled' ? tech.value : null,
+      finance: finance.status === 'fulfilled' ? finance.value : null,
+      legal: legal.status === 'fulfilled' ? legal.value : null,
+      global: global.status === 'fulfilled' ? global.value : null,
     };
 
     // ── Phase 2: Synthesis Agent (combines all outputs + brief + VC memos) ──────────────
     updatePendingResults(runId, { synthesis_status: 'running' });
-    let synthesisResult;
+    let synthesisResult: Synthesis | null = null;
     try {
       synthesisResult = await synthesizeResults({
         idea,
@@ -200,36 +260,80 @@ export async function runInMemoryPipeline(
         synthesis_status: 'completed',
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[In-Memory Agent: Synthesis] Live call issue (${msg}), using domain fixture fallback`);
-      synthesisResult = fixture.synthesis;
-      updatePendingResults(runId, {
-        synthesis: synthesisResult,
-        synthesis_status: 'completed',
-      });
+      console.warn(`[In-Memory Agent: Synthesis] Attempt 1 failed, retrying in 2s:`, err);
+      try {
+        await delay(2000);
+        synthesisResult = await synthesizeResults({
+          idea,
+          language,
+          competitors: agentResults.competitors,
+          tech: agentResults.tech,
+          finance: agentResults.finance,
+          legal: agentResults.legal,
+          global: agentResults.global,
+          brief: approvedBrief ?? null,
+          pitchDeckContext: context.pitchDeckContext,
+          vcMemos: context.vcMemos,
+          drhpBenchmarks: context.drhpBenchmarks,
+          statutoryContext: context.statutoryContext,
+          patentLandscape: context.patentLandscape,
+          ycFrameworks: context.ycFrameworks,
+          macroReport: context.macroReport,
+          driftAlert: context.driftAlert,
+        });
+        updatePendingResults(runId, {
+          synthesis: synthesisResult,
+          synthesis_status: 'completed',
+        });
+      } catch (retryErr) {
+        console.error(`[In-Memory Agent: Synthesis] Agent failed after retry:`, retryErr);
+        updatePendingResults(runId, {
+          synthesis_status: 'failed',
+        });
+      }
     }
 
     // ── Phase 3: Adversarial Red-Team (Agent 7) ─────────────────────────────
-    updatePendingResults(runId, { red_team_status: 'running' });
-    try {
-      const redTeam = await runRedTeamAnalysis({
-        idea,
-        language,
-        synthesis: synthesisResult,
-        brief: approvedBrief ?? null,
-        pitchDeckContext: context.pitchDeckContext,
-        patentLandscape: context.patentLandscape,
-        ycFrameworks: context.ycFrameworks,
-      });
-      updatePendingResults(runId, {
-        red_team: redTeam,
-        red_team_status: 'completed',
-      });
-    } catch (err) {
-      console.warn('[In-Memory Agent: Red-Team] Failed, completing with fallback:', err);
-      updatePendingResults(runId, {
-        red_team_status: 'completed',
-      });
+    if (synthesisResult) {
+      updatePendingResults(runId, { red_team_status: 'running' });
+      try {
+        const redTeam = await runRedTeamAnalysis({
+          idea,
+          language,
+          synthesis: synthesisResult,
+          brief: approvedBrief ?? null,
+          pitchDeckContext: context.pitchDeckContext,
+          patentLandscape: context.patentLandscape,
+          ycFrameworks: context.ycFrameworks,
+        });
+        updatePendingResults(runId, {
+          red_team: redTeam,
+          red_team_status: 'completed',
+        });
+      } catch (err) {
+        console.warn('[In-Memory Agent: Red-Team] Attempt 1 failed, retrying in 2s:', err);
+        try {
+          await delay(2000);
+          const redTeam = await runRedTeamAnalysis({
+            idea,
+            language,
+            synthesis: synthesisResult,
+            brief: approvedBrief ?? null,
+            pitchDeckContext: context.pitchDeckContext,
+            patentLandscape: context.patentLandscape,
+            ycFrameworks: context.ycFrameworks,
+          });
+          updatePendingResults(runId, {
+            red_team: redTeam,
+            red_team_status: 'completed',
+          });
+        } catch (retryErr) {
+          console.error('[In-Memory Agent: Red-Team] Agent failed after retry:', retryErr);
+          updatePendingResults(runId, {
+            red_team_status: 'failed',
+          });
+        }
+      }
     }
 
     updatePendingRun(runId, {
