@@ -6,11 +6,7 @@ import { analyzeLegalRegulatory } from '@/agents/legal-regulatory';
 import { analyzeGlobalBenchmarks } from '@/agents/global-benchmarks';
 import { runRedTeamAnalysis } from '@/agents/red-team';
 import { updatePendingRun, updatePendingResults } from '@/lib/pending-runs';
-import type { CompetitorAnalysis } from '@/schemas/competitor.schema';
-import type { TechFeasibility } from '@/schemas/tech-feasibility.schema';
-import type { FinancialModel } from '@/schemas/financial-model.schema';
-import type { LegalRegulatory } from '@/schemas/legal-regulatory.schema';
-import type { GlobalPrecedents } from '@/schemas/global-precedents.schema';
+import type { Synthesis } from '@/schemas/synthesis.schema';
 import type { ValidationBrief } from '@/schemas/brief.schema';
 import { assembleEnrichedContext } from '@/lib/context-assembler';
 
