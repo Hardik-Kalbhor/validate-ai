@@ -64,11 +64,8 @@ export async function POST(req: NextRequest) {
         const brief = await deconstructIdea(body.idea, body.language);
         return NextResponse.json({ brief });
       } catch (retryError) {
-        console.error('[Deconstruct API] Gemini agent failed after retry:', retryError);
-        return NextResponse.json(
-          { error: 'AI Idea Framing temporarily unavailable. Please try again in a few moments.' },
-          { status: 503 }
-        );
+        console.warn('[Deconstruct API] Gemini agent failed after retry, falling back to heuristic brief:', retryError);
+        return NextResponse.json({ brief: generateMockBrief(body.idea) });
       }
     }
   } catch (error) {

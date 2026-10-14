@@ -40,8 +40,8 @@ export interface ValidationResults {
 }
 
 /**
- * Normalizes results to prevent UI hangs if database columns (e.g. global_status)
- * are missing or unmigrated in Supabase.
+ * Normalizes results to prevent UI hangs if database columns or updates
+ * are delayed, missing, or unmigrated in Supabase.
  */
 function enrichResults(
   rawResults: ValidationResults | null,
@@ -50,15 +50,35 @@ function enrichResults(
   if (!rawResults) return null;
   const enriched = { ...rawResults };
 
-  // If DB lacks global_status column or it remained pending despite synthesis completing
   const isSynthesisDone = enriched.synthesis_status === 'completed';
   const isRunDone = currentRun?.status === 'completed' || currentRun?.status === 'failed';
 
-  if (!enriched.global_status || enriched.global_status === 'pending') {
-    if (enriched.global_benchmarks) {
-      enriched.global_status = 'completed';
-    } else if (isSynthesisDone || isRunDone) {
-      enriched.global_status = enriched.global_benchmarks ? 'completed' : 'failed';
+  type StatusKey =
+    | 'competitor_status'
+    | 'tech_status'
+    | 'financial_status'
+    | 'legal_status'
+    | 'global_status'
+    | 'synthesis_status'
+    | 'red_team_status';
+
+  const agentChecks: Array<[StatusKey, keyof ValidationResults]> = [
+    ['competitor_status', 'competitors'],
+    ['tech_status', 'tech_feasibility'],
+    ['financial_status', 'financial_model'],
+    ['legal_status', 'legal_regulatory'],
+    ['global_status', 'global_benchmarks'],
+    ['synthesis_status', 'synthesis'],
+    ['red_team_status', 'red_team'],
+  ];
+
+  for (const [statusField, dataField] of agentChecks) {
+    const status = enriched[statusField];
+    const hasData = Boolean(enriched[dataField]);
+    if (hasData) {
+      enriched[statusField] = 'completed';
+    } else if ((!status || status === 'pending' || status === 'running') && (isSynthesisDone || isRunDone)) {
+      enriched[statusField] = 'failed';
     }
   }
 
