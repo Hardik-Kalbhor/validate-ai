@@ -4,11 +4,11 @@ import { getRelevantRegulatoryActs } from '../src/lib/regulatory-acts.ts';
 import { getDRHPBenchmarksForIdea } from '../src/lib/drhp-benchmarks.ts';
 import { getCourtPrecedentsForIdea } from '../src/lib/court-precedents.ts';
 import { getVCMemoExamples } from '../src/lib/vc-memos.ts';
-import { getPatentLandscapeForIdea } from '../src/lib/patent-search.ts';
 import { getYCFrameworksForIdea } from '../src/lib/yc-essays.ts';
 import { detectAssumptionDrift } from '../src/lib/pivot-tracker.ts';
 import { extractPitchDeckText } from '../src/lib/pitch-deck.ts';
 import { RedTeamSchema } from '../src/schemas/red-team.schema.ts';
+import { TechFeasibilitySchema } from '../src/schemas/tech-feasibility.schema.ts';
 import type { ValidationBrief } from '../src/schemas/brief.schema.ts';
 
 describe('Phase 1 Context Enrichment Suite', () => {
@@ -137,12 +137,39 @@ describe('Phase 1 Context Enrichment Suite', () => {
     assert.strictEqual(parsed.adversarial_challenges.length, 3);
   });
 
-  it('getPatentLandscapeForIdea returns technical patent prior art and claim disclosures', () => {
-    const iotIdea = 'Solar powered cold storage micro warehouses with IoT temperature telemetry';
-    const patents = getPatentLandscapeForIdea(iotIdea);
-    assert.ok(patents.includes('Patent'));
-    assert.ok(patents.includes('Claims'));
-    assert.ok(patents.includes('Freedom-to-Operate'));
+  it('TechFeasibilitySchema validates dynamic patent landscape citations', () => {
+    const sampleTech = {
+      business_type: 'hybrid' as const,
+      technology_stack: {
+        frontend: 'React Native',
+        backend: 'Node.js',
+        database: 'PostgreSQL',
+        ai_ml: 'Python',
+        infrastructure: 'AWS',
+      },
+      complexity_score: 7,
+      mvp_timeline_months: 5,
+      full_product_timeline_months: 12,
+      engineering_hurdles: ['Sensor drift', 'BMS fragmentation', 'Edge sync'],
+      infrastructure_needs: ['IoT Core', 'TimescaleDB', 'Redis cluster'],
+      integration_points: ['Razorpay', 'Sarathi API'],
+      security_considerations: ['TLS encryption', 'RBAC', 'FOTA'],
+      build_vs_buy: 'Build core, buy cloud',
+      scalability_notes: 'Scales horizontally via ECS',
+      niche_unique_technologies: ['AWS Greengrass', 'MQTT-SN', 'Python-CAN'],
+      patent_landscape: [
+        {
+          patent_number: 'US10890637B2',
+          title: 'Systems and methods for determining state of health of energy storage devices',
+          assignee: 'Rejoule Inc.',
+          fto_risk: 'high' as const,
+          defensive_workaround: 'Pulsed load relaxation instead of frequency sweep',
+        },
+      ],
+    };
+    const parsed = TechFeasibilitySchema.parse(sampleTech);
+    assert.ok(parsed.patent_landscape && parsed.patent_landscape.length > 0);
+    assert.strictEqual(parsed.patent_landscape[0].assignee, 'Rejoule Inc.');
   });
 
   it('getYCFrameworksForIdea returns venture underwriting mental models and failure post-mortems', () => {

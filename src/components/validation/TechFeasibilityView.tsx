@@ -6,7 +6,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Progress } from '@/components/ui/progress';
 import { Cpu, ShieldAlert } from 'lucide-react';
 import type { TechFeasibility } from '@/schemas/tech-feasibility.schema';
-import { getStructuredPatentsForIdea } from '@/lib/patent-search';
 
 interface Props {
   data: TechFeasibility;
@@ -19,11 +18,9 @@ const complexityLabel = (score: number) => {
   return { label: 'High', color: 'text-red-600' };
 };
 
-export function TechFeasibilityView({ data, ideaText }: Props) {
+export function TechFeasibilityView({ data }: Props) {
   const { label, color } = complexityLabel(data.complexity_score);
-  const patents = (data.patent_landscape && data.patent_landscape.length > 0)
-    ? data.patent_landscape
-    : getStructuredPatentsForIdea(ideaText);
+  const patents = data.patent_landscape || [];
 
 
   return (

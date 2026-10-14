@@ -2,7 +2,6 @@ import { getRelevantRegulatoryActs } from './regulatory-acts';
 import { getDRHPBenchmarksForIdea } from './drhp-benchmarks';
 import { getCourtPrecedentsForIdea } from './court-precedents';
 import { getVCMemoExamples } from './vc-memos';
-import { getPatentLandscapeForIdea } from './patent-search';
 import { getYCFrameworksForIdea } from './yc-essays';
 import { getMacroIndicators, formatMacroContext } from './macro-world-bank';
 import {
@@ -66,7 +65,7 @@ export async function assembleEnrichedContext(
   const drhpBenchmarks = getDRHPBenchmarksForIdea(idea);
   const courtPrecedents = getCourtPrecedentsForIdea(idea);
   const vcMemos = getVCMemoExamples();
-  const patentLandscape = getPatentLandscapeForIdea(idea, brief?.agent_directives?.tech_focus);
+  const patentLandscape = '';
   const ycFrameworks = getYCFrameworksForIdea(idea, brief?.target_audience?.business_model);
 
   // Extract competitor target keywords for high-accuracy live sentiment
