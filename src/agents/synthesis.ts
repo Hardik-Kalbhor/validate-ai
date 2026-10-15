@@ -27,12 +27,15 @@ interface SynthesisInput {
   ycFrameworks?: string;
   macroReport?: string;
   driftAlert?: DriftAlertData | null;
+  vcDefensePlaybook?: string;
+  governmentSchemes?: string;
 }
 
 /**
  * Agent 4: Synthesis (Dynamic AI Agent)
  * Deep reasoning over all parallel agent outputs, enriched by VC memos,
- * DRHP benchmarks, statutory acts, patent landscapes, YC post-mortems, and cross-run pivot tracking using Google Gemini.
+ * DRHP benchmarks, statutory acts, patent landscapes, YC post-mortems,
+ * VC Partner IC defense interrogations, and cross-run pivot tracking using Google Gemini.
  */
 export async function synthesizeResults(input: SynthesisInput): Promise<Synthesis> {
   const {
@@ -52,6 +55,8 @@ export async function synthesizeResults(input: SynthesisInput): Promise<Synthesi
     ycFrameworks,
     macroReport,
     driftAlert,
+    vcDefensePlaybook,
+    governmentSchemes,
   } = input;
 
   const context = [
@@ -69,43 +74,34 @@ export async function synthesizeResults(input: SynthesisInput): Promise<Synthesi
     ycFrameworks ? `YC VENTURE UNDERWRITING FRAMEWORKS & FAILURE POST-MORTEMS:\n${ycFrameworks}` : null,
     macroReport ? `MACROECONOMIC LANDSCAPE (India):\n${macroReport}` : null,
     vcMemos ? `TIER-1 VC PARTNER INVESTMENT MEMO BENCHMARKS (MODEL REASONING):\n${vcMemos}` : null,
+    vcDefensePlaybook ? `TIER-1 VC PARTNER INVESTMENT COMMITTEE (IC) INTERROGATION & DEFENSE PLAYBOOK:\n${vcDefensePlaybook}` : null,
+    governmentSchemes ? `GOVERNMENT STARTUP SUBSIDIES & NON-DILUTIVE GRANTS:\n${governmentSchemes}` : null,
   ].filter(Boolean).join('\n\n---\n\n');
 
   const { object } = await generateObject({
     model: geminiModel,
     schema: SynthesisSchema,
     abortSignal: AbortSignal.timeout(AGENT_TIMEOUT_MS),
-    prompt: `You are a senior venture analyst and partner at a top Indian VC firm with 15+ years of experience.
-
-Synthesize ALL the extensive research and evidence below into a comprehensive, deeply grounded verdict for this business idea:
+    prompt: `You are the Lead Investment Partner and Chief Strategy Officer at a premier venture fund.
+Review the comprehensive findings from all 5 specialized validation agents, audited DRHP benchmarks, technical patents, YC frameworks, VC partner interrogation questions, and statutory acts for this business idea:
 
 IDEA: "${idea}"
 OUTPUT LANGUAGE: ${language === 'hi' ? 'Hindi' : language === 'mr' ? 'Marathi' : 'English'}
 
-RESEARCH DATA & GROUNDING DOSSIER:
+DOSSIER:
 ${context}
 
-Your task:
-1. Give an honest viability verdict based on the COMBINED evidence across local competitors, technical build, financials, regulatory compliance, international precedents, audited DRHP comps, and patent landscapes.
-   CRITICAL: If the legal analysis shows 'has_blocker_issues: true', the verdict CANNOT be 'highly_viable'.
-2. Assign a confidence score (0-100) reflecting how strong the empirical evidence is overall.
-3. Write a sharp executive summary (3-4 sentences) that captures the core insight, factoring in international model validation, Indian market readiness, and realistic unit economics.
+Instructions:
+1. Give an honest viability verdict based on the COMBINED evidence across local competitors, technical build, financials, regulatory compliance, international precedents, audited DRHP comps, patent landscapes, and VC defense playbooks.
+2. Calculate a calibrated confidence score (0-100) reflecting real-world execution difficulty in India.
+3. If assumption drift is noted above from prior validation runs, directly address whether the pivot improves or worsens venture viability.
 4. Identify the 3-6 MOST IMPORTANT risks with specific mitigations — include regulatory traps, patent barriers, and risks learned from international and public peers.
-5. Identify the 3-6 BEST opportunities, prioritized by impact and timing.
-6. Define a clear, prioritized action plan — what should the founder do FIRST?
-   (Regulatory filings / entity incorporation / pilot FPO agreements often must precede product launch.)
-7. Score each dimension 0-100 based on the data, not assumptions:
-   - market_opportunity: strength of market, TAM, and growth
-   - competitive_position: differentiation vs existing players
-   - technical_feasibility: build complexity and timeline
-   - financial_viability: unit economics and path to profitability
-   - legal_compliance: regulatory clarity (100 = low burden, 0 = severe blockers)
-
-Be decisive, intellectually rigorous, and actionable. Indian entrepreneurs need hard truth and operational clarity.`,
+5. Provide actionable, high-impact strategic improvements and optimizations that the founder should immediately execute to raise institutional funding.
+6. Synthesize realistic go-to-market opportunities with specific timeframe and business impact estimates.`,
   });
 
   if (!object) {
-    throw new Error('Synthesis returned empty output');
+    throw new Error('Synthesis agent returned empty output');
   }
 
   return object;

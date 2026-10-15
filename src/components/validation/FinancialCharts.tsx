@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -15,10 +16,13 @@ import { Badge } from '@/components/ui/badge';
 import { formatINRCompact, formatINR } from '@/lib/utils';
 import type { FinancialModel } from '@/schemas/financial-model.schema';
 import { FinancialBmcView } from './FinancialBmcView';
-import { ArrowUpRight, TrendingUp, Coins } from 'lucide-react';
+import { FinancialSensitivitySimulator } from './FinancialSensitivitySimulator';
+import { getEligibleGovernmentSchemes, ALL_INDIAN_STATES } from '@/lib/government-schemes';
+import { ArrowUpRight, TrendingUp, Coins, Landmark, ExternalLink, MapPin } from 'lucide-react';
 
 interface Props {
   data: FinancialModel;
+  ideaText?: string;
 }
 
 interface TooltipPayloadItem {
@@ -73,8 +77,15 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   return null;
 }
 
-export function FinancialCharts({ data }: Props) {
+export function FinancialCharts({ data, ideaText }: Props) {
   const { revenue_forecast: rf, cost_structure: cs, market_size_inr: ms } = data;
+  const [selectedState, setSelectedState] = useState<string>('Karnataka');
+
+  const eligibleSchemes = getEligibleGovernmentSchemes(
+    ideaText || 'agritech logistics platform',
+    undefined,
+    selectedState
+  );
 
   const revenueData = [
     { year: 'Year 1', Conservative: rf.year1_conservative, Optimistic: rf.year1_optimistic },
@@ -102,6 +113,15 @@ export function FinancialCharts({ data }: Props) {
           </Card>
         ))}
       </div>
+
+      {/* ── Real-Time Interactive Sensitivity Simulator ── */}
+      <FinancialSensitivitySimulator
+        initialAOV={data.pricing_strategy.recommended_price_inr || 1400}
+        initialCAC={cs.cac || 340}
+        initialTakeRate={16}
+        initialDeliveryCost={55}
+        initialFixedOpEx={cs.monthly_opex || 375000}
+      />
 
       {/* ── Market Size ── */}
       <Card>
@@ -268,6 +288,94 @@ export function FinancialCharts({ data }: Props) {
               <p className="text-muted-foreground leading-relaxed">{data.funding_insights}</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* ── Central & State Government Grants & Subsidies Engine ── */}
+      <Card className="border-emerald-500/20 bg-gradient-to-br from-card via-card to-emerald-500/5">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600">
+                <Landmark className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  Eligible Government Subsidies & Non-Dilutive Capital
+                  <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 text-xs font-medium">
+                    Verified Schemes
+                  </Badge>
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Central and state-level startup grants, interest subventions, and tax exemptions eligible for this venture.
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 bg-background/80 border border-emerald-500/30 rounded-lg px-2.5 py-1 text-xs shadow-sm">
+                <MapPin className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                <span className="text-muted-foreground font-medium text-[11px]">State Policy:</span>
+                <select
+                  value={selectedState}
+                  onChange={(e) => setSelectedState(e.target.value)}
+                  className="bg-transparent text-foreground font-semibold text-xs border-none focus:outline-none cursor-pointer pr-1"
+                >
+                  {ALL_INDIAN_STATES.map((st) => (
+                    <option key={st} value={st} className="bg-popover text-foreground">
+                      {st}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 px-2.5 py-1 text-xs font-semibold">
+                Up to ₹70L+ Non-Dilutive Grant Potential
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {eligibleSchemes.map((scheme) => (
+              <div
+                key={scheme.id}
+                className="p-3.5 rounded-xl border bg-card/60 hover:bg-card transition-all flex flex-col justify-between space-y-2.5"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-semibold text-xs text-foreground leading-snug">
+                      {scheme.name}
+                    </h4>
+                    <Badge variant="secondary" className="text-[10px] shrink-0 font-medium">
+                      {scheme.level}
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {scheme.ministryOrDepartment}
+                  </p>
+                  <p className="text-xs text-foreground font-medium mt-2 leading-relaxed">
+                    {scheme.financialBenefit}
+                  </p>
+                  <div className="mt-2 text-[11px] text-muted-foreground">
+                    <span className="font-semibold text-foreground">Eligibility: </span>
+                    {scheme.eligibilitySummary}
+                  </div>
+                </div>
+                <div className="pt-2 border-t flex items-center justify-between text-xs">
+                  <span className="text-[10px] font-mono text-emerald-600 font-semibold">
+                    {scheme.fundingType}
+                  </span>
+                  <a
+                    href={scheme.portalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    Official Portal <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 

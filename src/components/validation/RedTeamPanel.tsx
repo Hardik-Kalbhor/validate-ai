@@ -1,15 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Flame, ShieldAlert, ChevronDown, ChevronUp, ShieldCheck } from 'lucide-react';
+import { Flame, ShieldAlert, ChevronDown, ChevronUp, ShieldCheck, Skull } from 'lucide-react';
 import type { RedTeamAnalysis } from '@/schemas/red-team.schema';
+import { getRelevantStartupAutopsies } from '@/lib/startup-post-mortems';
 
 interface RedTeamPanelProps {
   analysis: RedTeamAnalysis;
+  ideaText?: string;
 }
 
-export function RedTeamPanel({ analysis }: RedTeamPanelProps) {
+export function RedTeamPanel({ analysis, ideaText }: RedTeamPanelProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const autopsies = getRelevantStartupAutopsies(ideaText || 'agritech logistics platform');
 
   const getVerdictBadge = (verdict: RedTeamAnalysis['verdict']) => {
     switch (verdict) {
@@ -156,6 +159,57 @@ export function RedTeamPanel({ analysis }: RedTeamPanelProps) {
                       <span className="text-foreground">{c.required_contingency}</span>
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Historical Startup Autopsies & Failure Precedents ── */}
+          <div className="space-y-3 pt-2 border-t border-border/50">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Skull className="w-3.5 h-3.5 text-rose-500" />
+                <span>Historical Startup Autopsies &amp; Failure Precedents</span>
+              </h4>
+              <span className="text-[10px] text-muted-foreground font-mono">
+                Historical Ecosystem Lessons
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {autopsies.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-lg p-3 bg-muted/40 border border-border/60 space-y-2 text-xs"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-bold text-foreground text-sm">{item.startupName}</span>
+                      <span className="text-muted-foreground text-[11px] block">{item.sector} ({item.geography})</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20 shrink-0">
+                      {item.status}
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-rose-900 dark:text-rose-200 bg-rose-500/5 p-2 rounded border border-rose-500/10">
+                    <strong>Fatal Failure Mode: </strong>{item.primaryFailureMode}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 text-[10px] p-2 rounded bg-background border font-mono">
+                    <div>
+                      <span className="text-muted-foreground block">Peak Burn/Val:</span>
+                      <span className="font-bold text-foreground truncate block">{item.peakValuationOrBurn.slice(0, 24)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block">Contribution Margin:</span>
+                      <span className="font-bold text-rose-600 truncate block">{item.fatalMetrics.contributionMargin}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-muted-foreground italic border-l-2 border-primary/40 pl-2">
+                    &ldquo;{item.founderAutopsyQuoteOrLesson}&rdquo;
+                  </p>
                 </div>
               ))}
             </div>

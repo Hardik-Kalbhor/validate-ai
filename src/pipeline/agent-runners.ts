@@ -171,17 +171,18 @@ export async function runFinancialAgent(
   directive?: string,
   drhpBenchmarks?: string,
   pitchDeckContext?: string,
-  ycFrameworks?: string
+  ycFrameworks?: string,
+  governmentSchemes?: string
 ) {
   await setAgentStatus(admin, runId, 'financial_status', 'running');
   try {
     let result;
     try {
-      result = await modelFinancials(idea, language, directive, drhpBenchmarks, pitchDeckContext, ycFrameworks);
+      result = await modelFinancials(idea, language, directive, drhpBenchmarks, pitchDeckContext, ycFrameworks, governmentSchemes);
     } catch (apiErr) {
       console.warn(`[Agent 3: Financial] Live call attempt 1 failed (${apiErr}), retrying...`);
       await new Promise((r) => setTimeout(r, 2000));
-      result = await modelFinancials(idea, language, directive, drhpBenchmarks, pitchDeckContext, ycFrameworks);
+      result = await modelFinancials(idea, language, directive, drhpBenchmarks, pitchDeckContext, ycFrameworks, governmentSchemes);
     }
 
     const { error } = await admin.from('validation_results').update({
@@ -218,7 +219,9 @@ export async function runLegalAgent(
   directive?: string,
   statutoryContext?: string,
   courtPrecedents?: string,
-  pitchDeckContext?: string
+  pitchDeckContext?: string,
+  rocCompliance?: string,
+  governmentSchemes?: string
 ) {
   await setAgentStatus(admin, runId, 'legal_status', 'running');
   try {
@@ -230,7 +233,9 @@ export async function runLegalAgent(
         directive,
         statutoryContext,
         courtPrecedents,
-        pitchDeckContext
+        pitchDeckContext,
+        rocCompliance,
+        governmentSchemes
       );
     } catch (apiErr) {
       console.warn(`[Agent 5: Legal] Live call attempt 1 failed (${apiErr}), retrying...`);
@@ -241,7 +246,9 @@ export async function runLegalAgent(
         directive,
         statutoryContext,
         courtPrecedents,
-        pitchDeckContext
+        pitchDeckContext,
+        rocCompliance,
+        governmentSchemes
       );
     }
 
@@ -366,6 +373,8 @@ export async function runSynthesisAgent(
         ycFrameworks: contextBundle?.ycFrameworks,
         macroReport: contextBundle?.macroReport,
         driftAlert: contextBundle?.driftAlert,
+        vcDefensePlaybook: contextBundle?.vcDefensePlaybook,
+        governmentSchemes: contextBundle?.governmentSchemes,
       });
     } catch (apiErr) {
       console.warn(`[Agent 4: Synthesis] Live call attempt 1 failed (${apiErr}), retrying...`);
@@ -387,6 +396,8 @@ export async function runSynthesisAgent(
         ycFrameworks: contextBundle?.ycFrameworks,
         macroReport: contextBundle?.macroReport,
         driftAlert: contextBundle?.driftAlert,
+        vcDefensePlaybook: contextBundle?.vcDefensePlaybook,
+        governmentSchemes: contextBundle?.governmentSchemes,
       });
     }
 
@@ -425,7 +436,8 @@ export async function runRedTeamAgent(
   brief?: ValidationBrief | null,
   pitchDeckContext?: string,
   patentLandscape?: string,
-  ycFrameworks?: string
+  ycFrameworks?: string,
+  startupAutopsies?: string
 ) {
   await setAgentStatus(admin, runId, 'red_team_status', 'running');
   try {
@@ -437,6 +449,7 @@ export async function runRedTeamAgent(
       pitchDeckContext,
       patentLandscape,
       ycFrameworks,
+      startupAutopsies,
     });
 
     const { error } = await admin.from('validation_results').update({

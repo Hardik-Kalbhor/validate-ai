@@ -5,6 +5,19 @@ import { getVCMemoExamples } from './vc-memos';
 import { getYCFrameworksForIdea } from './yc-essays';
 import { getMacroIndicators, formatMacroContext } from './macro-world-bank';
 import {
+  getEligibleGovernmentSchemes,
+  formatGovernmentSchemesContext,
+} from './government-schemes';
+import {
+  getRelevantStartupAutopsies,
+  formatStartupAutopsyContext,
+} from './startup-post-mortems';
+import {
+  getVCPartnerDefenseQuestions,
+  formatVCPartnerDefenseContext,
+} from './vc-defense-playbook';
+import { formatComplianceContext } from './roc-compliance';
+import {
   resolveCompetitorKeywords,
   fetchAppStoreReviews,
   fetchRedditSentiment,
@@ -29,6 +42,10 @@ export interface EnrichedContextBundle {
   macroReport: string;
   liveSentiment: string;
   driftAlert: DriftAlertData | null;
+  governmentSchemes: string;
+  startupAutopsies: string;
+  vcDefensePlaybook: string;
+  rocCompliance: string;
 }
 
 export interface AssembleContextOptions {
@@ -45,11 +62,13 @@ export interface AssembleContextOptions {
  * - Pre-compiled Statutory Regulatory Corpus (Unabridged DPDP, RBI PA/PG, IT Act 79, FSSAI, CCPA Dark Patterns)
  * - Audited DRHP Unit Economics Benchmarks (Zomato, Delhivery, DeHaat/Ninjacart, Nykaa)
  * - Landmark Indian Court & Antitrust Precedents (CCI, Supreme Court Shreya Singhal)
- * - Technical Patent Landscape & Prior Art (IoT telemetry, cold storage, algorithmic matching)
- * - YC Venture Underwriting Frameworks & Failure Post-Mortems (Marketplace disintermediation, hardware CapEx spirals)
- * - Tier-1 VC Partner Investment Memos (few-shot reasoning models)
+ * - YC Venture Underwriting Frameworks & Failure Post-Mortems
+ * - Central & State Government Startup Subsidies, Grants & Tax Holidays (SISFS, CGSS, 80-IAC, ELEVATE)
+ * - 100+ Startup Post-Mortems & Historical Failure Patterns (Dunzo, TinyOwl, PepperTap, FrontRow)
+ * - Tier-1 VC Partner Investment Committee Interrogation & Defense Playbook (Peak XV, Accel, Matrix)
+ * - Statutory RoC & License Portal Filings Roadmap (MCA21 SPICe+, FoSCoS, FIRMS, Stamp Duty)
  * - World Bank Open API Macroeconomic Indicators (India)
- * - Live App Store Customer Reviews & Reddit Sentiment (Competitor entity resolution)
+ * - Live App Store Customer Reviews & Reddit Sentiment
  * - User Cross-Run Pivot & Assumption Drift Tracking
  */
 export async function assembleEnrichedContext(
@@ -67,6 +86,18 @@ export async function assembleEnrichedContext(
   const vcMemos = getVCMemoExamples();
   const patentLandscape = '';
   const ycFrameworks = getYCFrameworksForIdea(idea, brief?.target_audience?.business_model);
+
+  // New High-Density Knowledge Packs
+  const eligibleSchemes = getEligibleGovernmentSchemes(idea, brief?.target_audience?.business_model);
+  const governmentSchemes = formatGovernmentSchemesContext(eligibleSchemes);
+
+  const matchedAutopsies = getRelevantStartupAutopsies(idea, brief?.target_audience?.business_model);
+  const startupAutopsies = formatStartupAutopsyContext(matchedAutopsies);
+
+  const defenseQuestions = getVCPartnerDefenseQuestions(idea, brief?.target_audience?.business_model);
+  const vcDefensePlaybook = formatVCPartnerDefenseContext(defenseQuestions);
+
+  const rocCompliance = formatComplianceContext(idea, 'Karnataka');
 
   // Extract competitor target keywords for high-accuracy live sentiment
   const competitorCandidates = resolveCompetitorKeywords(
@@ -110,5 +141,9 @@ export async function assembleEnrichedContext(
     macroReport,
     liveSentiment,
     driftAlert,
+    governmentSchemes,
+    startupAutopsies,
+    vcDefensePlaybook,
+    rocCompliance,
   };
 }

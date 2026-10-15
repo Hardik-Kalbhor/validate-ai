@@ -86,7 +86,8 @@ export async function runValidationPipeline(
         approvedBrief?.agent_directives?.financial_focus,
         context.drhpBenchmarks,
         context.pitchDeckContext,
-        context.ycFrameworks
+        context.ycFrameworks,
+        context.governmentSchemes
       ),
       runLegalAgent(
         admin,
@@ -96,7 +97,9 @@ export async function runValidationPipeline(
         approvedBrief?.agent_directives?.legal_focus,
         context.statutoryContext,
         context.courtPrecedents,
-        context.pitchDeckContext
+        context.pitchDeckContext,
+        context.rocCompliance,
+        context.governmentSchemes
       ),
       runGlobalBenchmarksAgent(
         admin,
@@ -139,7 +142,8 @@ export async function runValidationPipeline(
       approvedBrief ?? null,
       context.pitchDeckContext,
       context.patentLandscape,
-      context.ycFrameworks
+      context.ycFrameworks,
+      context.startupAutopsies
     );
 
     // ── Mark run complete ─────────────────────────────────────────────

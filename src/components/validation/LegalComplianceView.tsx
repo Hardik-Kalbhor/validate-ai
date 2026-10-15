@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -18,10 +19,16 @@ import {
   Gavel,
   FileCheck2,
   ScrollText,
+  Landmark,
+  MapPin,
 } from 'lucide-react';
 import type { LegalRegulatory } from '@/schemas/legal-regulatory.schema';
+import { getComplianceChecklistForIdea, STATE_STAMP_DUTY_RATES } from '@/lib/roc-compliance';
 
-interface Props { data: LegalRegulatory }
+interface Props {
+  data: LegalRegulatory;
+  ideaText?: string;
+}
 
 const complexityConfig = {
   low:       { label: 'Low Complexity',      color: 'text-green-600',  bg: 'bg-green-50 border-green-200' },
@@ -51,9 +58,11 @@ const urgencyConfig = {
   low_priority:     { label: 'Low Priority',        className: 'bg-green-100 text-green-800 border-green-300' },
 };
 
-export function LegalComplianceView({ data }: Props) {
+export function LegalComplianceView({ data, ideaText }: Props) {
+  const [selectedState, setSelectedState] = useState<string>('Karnataka');
   const complexity = complexityConfig[data.compliance_complexity] || complexityConfig.medium;
   const nicheChallenges = data.niche_legal_challenges || [];
+  const { filings, stampDuty } = getComplianceChecklistForIdea(ideaText || 'agritech logistics platform', selectedState);
 
   return (
     <div className="space-y-6">
@@ -414,6 +423,109 @@ export function LegalComplianceView({ data }: Props) {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+
+        {/* ── Statutory RoC Portals, Stamp Duties & Licensing Roadmap ── */}
+        <Card className="border-primary/20 bg-gradient-to-br from-card via-card to-primary/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                  <Landmark className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    Statutory RoC Portals & Compliance Filings Roadmap
+                    <Badge variant="outline" className="border-primary/30 text-primary text-xs font-medium">
+                      India Jurisdiction: {stampDuty.state}
+                    </Badge>
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Official MCA21, FoSCoS, and RBI portal filing requirements, fee schedules, and non-compliance penalties.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 bg-background/80 border border-primary/30 rounded-lg px-2.5 py-1 text-xs shadow-sm">
+                  <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="text-muted-foreground font-medium text-[11px]">RoC State:</span>
+                  <select
+                    value={selectedState}
+                    onChange={(e) => setSelectedState(e.target.value)}
+                    className="bg-transparent text-foreground font-semibold text-xs border-none focus:outline-none cursor-pointer pr-1"
+                  >
+                    {STATE_STAMP_DUTY_RATES.map((st) => (
+                      <option key={st.state} value={st.state} className="bg-popover text-foreground">
+                        {st.state}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Badge className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold px-2.5 py-1">
+                  RoC: {stampDuty.rocOfficeJurisdiction}
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-1">
+            {/* State Stamp Duty Rates */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-muted/40 border text-xs">
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Stamp Duty (Capital ≤ ₹1L)</span>
+                <span className="font-bold text-foreground font-mono text-sm">{stampDuty.incorporationStampDuty1Lakh}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Stamp Duty (Capital ≤ ₹10L)</span>
+                <span className="font-bold text-foreground font-mono text-sm">{stampDuty.incorporationStampDuty10Lakh}</span>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <span className="text-muted-foreground block text-[11px]">e-MoA & e-AoA Stamp Duty</span>
+                <span className="font-bold text-foreground font-mono text-sm">{stampDuty.moaAoaStampDuty}</span>
+              </div>
+            </div>
+
+            {/* Filings List */}
+            <div className="space-y-3">
+              {filings.map((filing, idx) => (
+                <div key={filing.id} className="p-3.5 rounded-xl border bg-card/60 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold font-mono">
+                        {idx + 1}
+                      </span>
+                      <h4 className="font-bold text-xs text-foreground">
+                        {filing.filingName}
+                      </h4>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] font-mono">
+                      {filing.portalName}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+                    <div>
+                      <span className="text-muted-foreground">Deadline: </span>
+                      <span className="font-medium text-foreground">{filing.statutoryDeadline}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Govt Fee: </span>
+                      <span className="font-medium text-foreground font-mono">{filing.governmentFeeINR}</span>
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 dark:text-amber-200">
+                    <strong>Penalty: </strong>{filing.penaltyForNonCompliance}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground pt-1">
+                    <span className="font-semibold text-foreground">Procedure: </span>
+                    <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                      {filing.stepByStepInstructions.slice(0, 2).map((step, sIdx) => (
+                        <li key={sIdx}>{step}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Immediate Actions */}
         <div>

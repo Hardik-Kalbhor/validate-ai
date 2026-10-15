@@ -6,6 +6,7 @@ import {
   b2bManufacturingFixture,
   type DomainFixture,
 } from './demo-fixtures.ts';
+import type { RedTeamAnalysis } from '@/schemas/red-team.schema';
 
 export const DEMO_RUNS = [
   {
@@ -542,6 +543,43 @@ export const DEMO_RESULTS: Record<string, Record<string, unknown>> = {
   },
 };
 
+const defaultRedTeam: RedTeamAnalysis = {
+  devil_score: 74,
+  verdict: 'severe_vulnerabilities',
+  fatal_flaws: [
+    'Negative Unit Contribution Margin at low order density per cluster (delivery cost exceeds take-rate)',
+    'Section 9(5) CGST reverse charge absorbs 5% gross margin without input tax credit from day 1',
+    'Cook churn & meal inconsistency leading to leaky subscription bucket (>20% monthly churn)',
+  ],
+  adversarial_challenges: [
+    {
+      category: 'unit_economics',
+      claim: 'Initial gross margin of 34% allows profitable delivery operations.',
+      counter_argument: 'In Tier-2 cities, average tiffin price is ₹80-₹120. A 20% take-rate yields ₹20 per meal, whereas point-to-point rider payout is ₹35-₹50, resulting in negative CM1 unless strict 15-drop batching is achieved.',
+      severity: 'critical',
+      stress_test_scenario: 'Rider delivers fewer than 6 tiffins per run due to dispersed customer addresses across suburban clusters.',
+      required_contingency: 'Mandate corporate delivery hubs with minimum 10 subscriptions per building before opening a route.',
+    },
+    {
+      category: 'regulatory_trap',
+      claim: 'Home cooks operate as independent unregistered micro-entrepreneurs without platform liability.',
+      counter_argument: 'Under FSS Act Section 31 and FoSCoS rules, e-commerce food aggregators are vicariously liable for listing uncertified food business operators with penalties up to ₹5L per violation.',
+      severity: 'high',
+      stress_test_scenario: 'Food poisoning grievance filed against an onboarded cook triggers municipal health inspection of platform hub.',
+      required_contingency: 'Enforce mandatory FoSCoS basic registration API verification and ₹1Cr commercial general food safety liability insurance.',
+    },
+    {
+      category: 'incumbent_response',
+      claim: 'Zomato and Swiggy will ignore homemade daily tiffins due to small ticket sizes.',
+      counter_argument: 'Zomato Everyday and Swiggy Daily can leverage existing delivery fleets at marginal cost to offer subsidized home-style meals if tier-2 subscription demand proves substantial.',
+      severity: 'medium',
+      stress_test_scenario: 'Zomato launches ₹69 Everyday home-style meal subscription in target tier-2 cities with zero delivery fee.',
+      required_contingency: 'Secure exclusive supply contracts with top-rated home cook networks and focus on long-term customized regional cuisines.',
+    },
+  ],
+  steelman_argument: 'If the platform strictly enforces corporate cluster drop-offs (15-20 orders per building) and uses WhatsApp for zero-CAC viral referrals among office colleagues, logistics costs drop to ₹12/drop, unlocking positive CM2 of ₹285+ per month per user.',
+};
+
 function fixtureToDemoResult(runId: string, fixture: DomainFixture) {
   return {
     run_id: runId,
@@ -551,6 +589,7 @@ function fixtureToDemoResult(runId: string, fixture: DomainFixture) {
     legal_status: 'completed',
     global_status: 'completed',
     synthesis_status: 'completed',
+    red_team_status: 'completed',
     updated_at: new Date().toISOString(),
     competitors: fixture.competitors,
     tech_feasibility: fixture.tech,
@@ -558,6 +597,7 @@ function fixtureToDemoResult(runId: string, fixture: DomainFixture) {
     legal_regulatory: fixture.legal,
     global_benchmarks: fixture.global,
     synthesis: fixture.synthesis,
+    red_team: defaultRedTeam,
   };
 }
 

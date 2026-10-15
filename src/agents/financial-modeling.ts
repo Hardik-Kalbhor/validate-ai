@@ -5,7 +5,7 @@ import { FinancialModelSchema, type FinancialModel } from '@/schemas/financial-m
 /**
  * Agent 3: Financial Modeling (Dynamic AI Agent)
  * Builds TAM/SAM/SOM in INR, unit economics, CAC benchmarks, and Business Model Canvas
- * grounded in audited SEBI DRHPs and YC failure post-mortems using Google Gemini.
+ * grounded in audited SEBI DRHPs, government subsidies, and YC failure post-mortems using Google Gemini.
  */
 export async function modelFinancials(
   idea: string,
@@ -13,7 +13,8 @@ export async function modelFinancials(
   directive?: string,
   drhpBenchmarks?: string,
   pitchDeckContext?: string,
-  ycFrameworks?: string
+  ycFrameworks?: string,
+  governmentSchemes?: string
 ): Promise<FinancialModel> {
   const promptParts = [
     `You are a venture CFO and startup financial modeler specializing in Indian market unit economics, SEBI audited multiples, and capital efficiency.`,
@@ -23,6 +24,7 @@ export async function modelFinancials(
     directive ? `FINANCIAL DIRECTIVE & UNIT ECONOMICS HYPOTHESIS:\n${directive}` : null,
     pitchDeckContext ? `PITCH DECK FINANCIAL PROJECTIONS & COHORT DATA:\n${pitchDeckContext.slice(0, 25000)}` : null,
     drhpBenchmarks ? `SEBI AUDITED DRHP BENCHMARKS & PUBLIC COMPARABLES:\n${drhpBenchmarks}` : null,
+    governmentSchemes ? `CENTRAL & STATE GOVERNMENT SUBSIDIES & NON-DILUTIVE CAPITAL INCENTIVES:\n${governmentSchemes}` : null,
     ycFrameworks ? `YC VENTURE UNDERWRITING FRAMEWORKS & POST-MORTEMS:\n${ycFrameworks}` : null,
     `Instructions:
 1. Estimate real market size for this industry in India (TAM/SAM/SOM in INR).
@@ -35,7 +37,8 @@ export async function modelFinancials(
    - Year 3: conservative & optimistic
 6. All monetary values must be in Indian Rupees (INR).
 7. Factor in Indian startup realities: high churn rates, price sensitivity, UPI adoption, GST implications, and working capital financing requirements.
-8. Complete the Business Model Canvas with India-specific channels and key partners.`,
+8. Evaluate eligibility for non-dilutive government capital (SISFS, CGSS, PM-FME, Section 80-IAC tax exemption) to extend runway without equity dilution.
+9. Complete the Business Model Canvas with India-specific channels and key partners.`,
   ].filter(Boolean).join('\n\n');
 
   const { object } = await generateObject({

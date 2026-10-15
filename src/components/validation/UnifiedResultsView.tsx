@@ -25,6 +25,7 @@ import type { Synthesis } from '@/schemas/synthesis.schema';
 import type { ValidationBrief } from '@/schemas/brief.schema';
 import type { RedTeamAnalysis } from '@/schemas/red-team.schema';
 import type { DriftAlertData } from '@/lib/pivot-tracker';
+import { ExportMemoButton } from './ExportMemoButton';
 import {
   Search,
   Cpu,
@@ -167,26 +168,29 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
             </p>
           </div>
 
-          {/* Toggle between Tabbed View and Full Continuous Report */}
-          <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-lg border text-xs">
-            <Button
-              size="sm"
-              variant={viewMode === 'tabs' ? 'default' : 'ghost'}
-              className="h-7 px-3 text-xs gap-1.5"
-              onClick={() => setViewMode('tabs')}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-              Tabs View
-            </Button>
-            <Button
-              size="sm"
-              variant={viewMode === 'all' ? 'default' : 'ghost'}
-              className="h-7 px-3 text-xs gap-1.5"
-              onClick={() => setViewMode('all')}
-            >
-              <FileText className="h-3.5 w-3.5" />
-              Full Report
-            </Button>
+          <div className="flex items-center gap-2">
+            <ExportMemoButton run={run} results={results} />
+            {/* Toggle between Tabbed View and Full Continuous Report */}
+            <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-lg border text-xs">
+              <Button
+                size="sm"
+                variant={viewMode === 'tabs' ? 'default' : 'ghost'}
+                className="h-7 px-3 text-xs gap-1.5"
+                onClick={() => setViewMode('tabs')}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Tabs View
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'all' ? 'default' : 'ghost'}
+                className="h-7 px-3 text-xs gap-1.5"
+                onClick={() => setViewMode('all')}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Full Report
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -347,7 +351,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
 
           <TabsContent value="finance" className="mt-4">
             {results?.financial_status === 'completed' && results.financial_model ? (
-              <FinancialCharts data={results.financial_model as FinancialModel} />
+              <FinancialCharts data={results.financial_model as FinancialModel} ideaText={run?.idea_text} />
             ) : (
               <AgentStatusPlaceholder
                 status={results?.financial_status}
@@ -358,7 +362,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
 
           <TabsContent value="legal" className="mt-4">
             {results?.legal_status === 'completed' && results.legal_regulatory ? (
-              <LegalComplianceView data={results.legal_regulatory as LegalRegulatory} />
+              <LegalComplianceView data={results.legal_regulatory as LegalRegulatory} ideaText={run?.idea_text} />
             ) : (
               <AgentStatusPlaceholder
                 status={results?.legal_status}
@@ -381,9 +385,9 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
           <TabsContent value="synthesis" className="mt-4 space-y-6">
             {results?.synthesis_status === 'completed' && results.synthesis ? (
               <>
-                <SynthesisView data={results.synthesis as Synthesis} />
+                <SynthesisView data={results.synthesis as Synthesis} ideaText={run?.idea_text} />
                 {Boolean(results?.red_team) && (
-                  <RedTeamPanel analysis={results!.red_team as RedTeamAnalysis} />
+                  <RedTeamPanel analysis={results!.red_team as RedTeamAnalysis} ideaText={run?.idea_text} />
                 )}
               </>
             ) : (
@@ -436,7 +440,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
               <h2 className="text-lg font-bold">3. Financial Projections & Unit Economics</h2>
             </div>
             {results?.financial_status === 'completed' && results.financial_model ? (
-              <FinancialCharts data={results.financial_model as FinancialModel} />
+              <FinancialCharts data={results.financial_model as FinancialModel} ideaText={run?.idea_text} />
             ) : (
               <AgentStatusPlaceholder
                 status={results?.financial_status}
@@ -452,7 +456,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
               <h2 className="text-lg font-bold">4. Legal, Regulatory & Compliance Framework</h2>
             </div>
             {results?.legal_status === 'completed' && results.legal_regulatory ? (
-              <LegalComplianceView data={results.legal_regulatory as LegalRegulatory} />
+              <LegalComplianceView data={results.legal_regulatory as LegalRegulatory} ideaText={run?.idea_text} />
             ) : (
               <AgentStatusPlaceholder
                 status={results?.legal_status}
@@ -484,7 +488,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
               <h2 className="text-lg font-bold">6. Investment Synthesis & Action Plan</h2>
             </div>
             {results?.synthesis_status === 'completed' && results.synthesis ? (
-              <SynthesisView data={results.synthesis as Synthesis} />
+              <SynthesisView data={results.synthesis as Synthesis} ideaText={run?.idea_text} />
             ) : (
               <AgentStatusPlaceholder
                 status={results?.synthesis_status}
@@ -496,7 +500,7 @@ export function UnifiedResultsView({ runId, initialRun, initialResults }: Props)
           {/* Section 7: Adversarial Red-Team */}
           {Boolean(results?.red_team) && (
             <section id="section-red-team" className="space-y-3 pt-2">
-              <RedTeamPanel analysis={results!.red_team as RedTeamAnalysis} />
+              <RedTeamPanel analysis={results!.red_team as RedTeamAnalysis} ideaText={run?.idea_text} />
             </section>
           )}
         </div>

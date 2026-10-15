@@ -129,7 +129,8 @@ export async function runInMemoryPipeline(
             approvedBrief?.agent_directives?.financial_focus,
             context.drhpBenchmarks,
             context.pitchDeckContext,
-            context.ycFrameworks
+            context.ycFrameworks,
+            context.governmentSchemes
           );
           updatePendingResults(runId, { financial_model: res, financial_status: 'completed' });
           return res;
@@ -143,7 +144,8 @@ export async function runInMemoryPipeline(
               approvedBrief?.agent_directives?.financial_focus,
               context.drhpBenchmarks,
               context.pitchDeckContext,
-              context.ycFrameworks
+              context.ycFrameworks,
+              context.governmentSchemes
             );
             updatePendingResults(runId, { financial_model: res, financial_status: 'completed' });
             return res;
@@ -165,7 +167,9 @@ export async function runInMemoryPipeline(
             approvedBrief?.agent_directives?.legal_focus,
             context.statutoryContext,
             context.courtPrecedents,
-            context.pitchDeckContext
+            context.pitchDeckContext,
+            context.rocCompliance,
+            context.governmentSchemes
           );
           updatePendingResults(runId, { legal_regulatory: res, legal_status: 'completed' });
           return res;
@@ -179,7 +183,9 @@ export async function runInMemoryPipeline(
               approvedBrief?.agent_directives?.legal_focus,
               context.statutoryContext,
               context.courtPrecedents,
-              context.pitchDeckContext
+              context.pitchDeckContext,
+              context.rocCompliance,
+              context.governmentSchemes
             );
             updatePendingResults(runId, { legal_regulatory: res, legal_status: 'completed' });
             return res;
@@ -256,6 +262,8 @@ export async function runInMemoryPipeline(
         ycFrameworks: context.ycFrameworks,
         macroReport: context.macroReport,
         driftAlert: context.driftAlert,
+        vcDefensePlaybook: context.vcDefensePlaybook,
+        governmentSchemes: context.governmentSchemes,
       });
       updatePendingResults(runId, {
         synthesis: synthesisResult,
@@ -282,6 +290,8 @@ export async function runInMemoryPipeline(
           ycFrameworks: context.ycFrameworks,
           macroReport: context.macroReport,
           driftAlert: context.driftAlert,
+          vcDefensePlaybook: context.vcDefensePlaybook,
+          governmentSchemes: context.governmentSchemes,
         });
         updatePendingResults(runId, {
           synthesis: synthesisResult,
@@ -310,6 +320,7 @@ export async function runInMemoryPipeline(
           pitchDeckContext: context.pitchDeckContext,
           patentLandscape: context.patentLandscape,
           ycFrameworks: context.ycFrameworks,
+          startupAutopsies: context.startupAutopsies,
         });
         updatePendingResults(runId, {
           red_team: redTeam,
@@ -327,6 +338,7 @@ export async function runInMemoryPipeline(
             pitchDeckContext: context.pitchDeckContext,
             patentLandscape: context.patentLandscape,
             ycFrameworks: context.ycFrameworks,
+            startupAutopsies: context.startupAutopsies,
           });
           updatePendingResults(runId, {
             red_team: redTeam,
